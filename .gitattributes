@@ -1,0 +1,11 @@
+# Copyright 2026 Michael F. Collins, III
+# Licensed under the Naked Standup Source-Available Temporary License
+# See LICENSE.md for license terms.
+
+*               text=auto
+
+*.md            text eol=lf
+*.ps1           text eol=lf
+*.sh            text eol=lf
+
+.gitattributes  text eol=lf
