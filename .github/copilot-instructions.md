@@ -52,6 +52,16 @@ Licensed under the Naked Standup Source-Available Temporary License
 See LICENSE.md for license terms.
 ```
 
+## Architectural Decisions
+
+- Record all important architectural decisions as [Architectural Decision Records](https://adr.github.io/).
+- ADRs are stored in the `docs/adrs` subdirectory.
+- ADRs should be created in the `Proposed` status.
+- Once an ADR has been accepted and published, it should not be changed other than to update its status.
+- Architectural decisions can be revised or replaced by creating a new ADR. The new ADR should properly reference and link to the previous ADR.
+- Create [Mermaid](https://mermaid.js.org/) diagrams where they can help to understand the decision documented in the ADR.
+- Add sample source where helpful to illustrate the impact of the ADR or how to use the software or library documented in the ADR.
+
 ## Commit Messages
 
 - Naked Standup uses the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format for writing valuable and informative commit messages.
