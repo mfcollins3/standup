@@ -24,3 +24,8 @@ uvx --from git+https://github.com/github/spec-kit.git specify init `
 
 # Restore constitution.md because Spec Kit overwrote it with a template.
 git restore .specify/memory/constitution.md
+
+# Install development tools using mise.
+if ($IsMacOS) {
+    mise install
+}
