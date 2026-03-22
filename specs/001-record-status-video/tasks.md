@@ -49,7 +49,7 @@ Create a `UIView` subclass with `override class var layerClass: AnyClass { AVCap
 > **Independent Test**: Open recording screen → tap record → wait 30 seconds → verify recording stops and a `.mov` file exists in temp directory.
 
 - [x] T005 [US1] Implement model types (RecordingState, TimerState, TimerUrgency, RecordedVideo, PermissionStatus) in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [x] T006 [US1] Write RecordingViewModelTests for recording start, timer countdown, and auto-stop at zero in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T006 [US1] Write RecordingViewModelTests for recording start, timer countdown, and auto-stop at zero in `Apple/Projects/Standup/Tests/Recording/RecordingViewModelTests.swift`
 - [x] T007 [US1] Implement RecordingViewModel with state management, permission checking, and countdown timer in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
 - [x] T008 [US1] Implement CountdownTimerView with circular progress gauge and remaining time display in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
 - [x] T009 [US1] Implement RecordingScreen with camera preview, record button, and timer overlay in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
@@ -115,7 +115,7 @@ Replace the placeholder "Hello, World!" with navigation to `RecordingScreen`. Us
 >
 > **Independent Test**: Start recording → observe timer is default color → at 10s remaining, timer turns yellow → at 5s remaining, timer turns red. VoiceOver announces threshold changes.
 
-- [x] T011 [US2] Write CountdownTimerTests for urgency color mapping and threshold transitions in `Apple/Projects/StandupTests/Sources/Recording/CountdownTimerTests.swift`
+- [x] T011 [US2] Write CountdownTimerTests for urgency color mapping and threshold transitions in `Apple/Projects/Standup/Tests/Recording/CountdownTimerTests.swift`
 - [x] T012 [US2] Add color-coded urgency states to CountdownTimerView (default, yellow at 10s, red at 5s) in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
 - [x] T013 [US2] Add VoiceOver accessibility announcements at 10s and 5s thresholds in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
 
@@ -182,7 +182,7 @@ Update `RecordingScreen` to observe `RecordingViewModel.recordingState` and navi
 >
 > **Independent Test**: Record a video → review screen → tap re-record → recording screen appears with live preview and 30s timer → old video file no longer exists.
 
-- [x] T017 [US4] Write tests for re-record state transition and temp file cleanup in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T017 [US4] Write tests for re-record state transition and temp file cleanup in `Apple/Projects/Standup/Tests/Recording/RecordingViewModelTests.swift`
 - [x] T018 [US4] Implement reRecord() in RecordingViewModel with video file deletion and state reset in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
 - [x] T019 [US4] Add re-record button with discard confirmation to ReviewScreen in `Apple/Projects/Standup/Sources/Recording/ReviewScreen.swift`
 
@@ -217,7 +217,7 @@ Add a "Re-record" button to `ReviewScreen`:
 >
 > **Independent Test**: Start recording → tap stop at ~10 seconds → review screen shows video → play back → video is ~10 seconds long.
 
-- [x] T020 [US5] Write tests for early stop producing partial video with correct duration in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T020 [US5] Write tests for early stop producing partial video with correct duration in `Apple/Projects/Standup/Tests/Recording/RecordingViewModelTests.swift`
 - [x] T021 [US5] Add stop button to RecordingScreen and wire to stopRecording() in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
 
 ### T020 Details — Early Stop Tests

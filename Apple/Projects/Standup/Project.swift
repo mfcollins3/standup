@@ -173,7 +173,7 @@ func standupTests() -> Target {
 		product: .unitTests,
 		bundleId: "dev.michaelfcollins3.standup.tests",
 		deploymentTargets: .iOS("26.0"),
-		sources: ["../StandupTests/Sources/**"],
+		sources: ["Tests/**"],
 		dependencies: [
 			.target(name: "Standup")
 		],

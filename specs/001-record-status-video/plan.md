@@ -71,14 +71,13 @@ Apple/Projects/Standup/
 └── Config/
     └── (existing xcconfig files)
 
-Apple/Projects/StandupTests/          # New test target (to be added via Tuist)
-└── Sources/
-    └── Recording/
-        ├── RecordingViewModelTests.swift
-        └── CountdownTimerTests.swift
+Apple/Projects/Standup/Tests/         # Test sources for StandupTests target
+└── Recording/
+    ├── RecordingViewModelTests.swift
+    └── CountdownTimerTests.swift
 ```
 
-**Structure Decision**: Feature code is organized in a `Recording/` subdirectory under the existing `Sources/` folder, following a feature-based grouping convention. A new `StandupTests` test target will be added to Project.swift via Tuist to enable TDD per Constitution Principle II.
+**Structure Decision**: Feature code is organized in a `Recording/` subdirectory under the existing `Sources/` folder, following a feature-based grouping convention. A `StandupTests` test target is defined in Project.swift via Tuist with sources in `Tests/` under the `Standup` project directory, enabling TDD per Constitution Principle II.
 
 ## Complexity Tracking
 
