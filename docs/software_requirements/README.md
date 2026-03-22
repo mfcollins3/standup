@@ -23,6 +23,9 @@ The following software packages are required to be installed in your local devel
 1. [GitHub Copilot CLI](#github-copilot-cli)
 1. [Python](#python)
 1. [uv](#uv)
+1. [mise-en-place](#mise-en-place)
+1. [Xcodes.app](#xcodesapp)
+1. [Xcode](#xcode)
 
 ### Homebrew
 
@@ -183,3 +186,43 @@ Alternatively, you can use the standalone installer to download and install `uv`
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
+
+### mise-en-place
+
+| Operating System | Required? |
+| ---------------- | --------- |
+| Apple macOS | :white_check_mark: |
+| Linux | :x: |
+| Microsoft Windows | :x: |
+
+[mise-en-place](https://mise.jdx.dev/) is a package and version manager for developers. mise-en-place can be used as a replacement for many popular development tools and programming language version managers such as `nvm`, `pyenv`, and `rbenv`. We use mise-en-place to install [Tuist](https://tuist.io).
+
+To install mise-en-place, open a terminal and run:
+
+```bash
+curl https://mise.run | sh
+```
+
+### Xcodes.app
+
+| Operating System | Required? |
+| ---------------- | --------- |
+| Apple macOS | :white_check_mark: |
+| Linux | :x: |
+| Microsoft Windows | :x: |
+
+[Xcodes.app](https://www.xcodes.app/) is a version manager for [Xcode](#xcode). Xcodes.app can be used to download multiple versions of Xcode and easily switch between them for different projects. We use Xcodes.app to install Xcode on our development machines.
+
+Xcodes.app can be installed by downloading the installer from the [Xcodes.app website](https://www.xcodes.app).
+
+### Xcode
+
+| Operating System | Required? |
+| ---------------- | --------- |
+| Apple macOS | :white_check_mark: |
+| Linux | :x: |
+| Microsoft Windows | :x: |
+
+[Xcode](https://developer.apple.com/xcode) is Apple's development environment for building applications for Apple macOS, iOS, iPadOS, tvOS, visionOS, and watchOS. Xcode supports C, C++, Objective-C, and Swift programming language development for Apple platforms.
+
+We recommend using [Xcodes.app](#xcodesapp) to download and install Xcode on your development machine.
