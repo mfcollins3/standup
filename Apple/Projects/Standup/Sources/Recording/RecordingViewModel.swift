@@ -42,7 +42,8 @@ struct TimerState: Equatable {
 
 	var progress: Double {
 		guard totalDuration > 0 else { return 0 }
-		return remainingTime / totalDuration
+		let clampedRemaining = max(0, min(remainingTime, totalDuration))
+		return clampedRemaining / totalDuration
 	}
 }
 
