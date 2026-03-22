@@ -195,7 +195,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 | Linux | :x: |
 | Microsoft Windows | :x: |
 
-[mise-en-place](https://mise.jdx.dev/) is a package and version manager for developers. mise-en-place can be used as a replacement for many popular development tools and programming language version manages such as `nvm`, `pyenv`, and `rbenv`. We use mise-en-place to install [Tuist](https://tuist.io).
+[mise-en-place](https://mise.jdx.dev/) is a package and version manager for developers. mise-en-place can be used as a replacement for many popular development tools and programming language version managers such as `nvm`, `pyenv`, and `rbenv`. We use mise-en-place to install [Tuist](https://tuist.io).
 
 To install mise-en-place, open a terminal and run:
 
@@ -213,7 +213,7 @@ curl https://mise.run | sh
 
 [Xcodes.app](https://www.xcodes.app/) is a version manager for [Xcode](#xcode). Xcodes.app can be used to download multiple versions of Xcode and easily switch between them for different projects. We use Xcodes.app to install Xcode on our development machines.
 
-Xcodes.app can be installed by downloading the installer from the [Xodes.app website](https://www.xcodes.app).
+Xcodes.app can be installed by downloading the installer from the [Xcodes.app website](https://www.xcodes.app).
 
 ### Xcode
 
