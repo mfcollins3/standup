@@ -8,6 +8,7 @@ import UIKit
 // MARK: - RecordingScreen
 
 struct RecordingScreen: View {
+	@Environment(\.scenePhase) private var scenePhase
 	@State private var viewModel: RecordingViewModel
 	@State private var showReview = false
 	@State private var reviewURL: URL?
@@ -27,6 +28,15 @@ struct RecordingScreen: View {
 			await viewModel.checkPermissions()
 			if viewModel.permissionStatus.isFullyAuthorized {
 				viewModel.startPreview()
+			}
+		}
+		.onChange(of: scenePhase) { _, newPhase in
+			guard newPhase == .active else { return }
+			Task {
+				await viewModel.checkPermissions()
+				if viewModel.permissionStatus.isFullyAuthorized {
+					viewModel.startPreview()
+				}
 			}
 		}
 		.onChange(of: viewModel.recordingState) { _, newState in
