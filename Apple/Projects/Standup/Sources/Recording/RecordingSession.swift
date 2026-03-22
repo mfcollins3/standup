@@ -109,12 +109,14 @@ extension RecordingSession: AVCaptureFileOutputRecordingDelegate {
 
 		if let error = error as NSError? {
 			// Preserve partial video when recording was interrupted (e.g. incoming call)
-			// or succeeded despite minor errors
+			// or succeeded despite minor errors. The AVErrorRecordingSuccessfullyFinishedKey
+			// may be absent; in that case, assume the recording finished successfully rather
+			// than discarding a potentially usable file.
 			let partiallyRecorded = error.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool
-			if partiallyRecorded == true {
-				handler?(outputFileURL, nil)
-			} else {
+			if partiallyRecorded == false {
 				handler?(nil, error)
+			} else {
+				handler?(outputFileURL, nil)
 			}
 		} else {
 			handler?(outputFileURL, nil)
