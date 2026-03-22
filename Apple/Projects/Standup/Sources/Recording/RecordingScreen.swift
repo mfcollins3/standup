@@ -108,8 +108,12 @@ struct RecordingScreen: View {
 		case .recording:
 			stopButton
 
-		case .finished, .error:
+		case .finished:
 			EmptyView()
+
+		case .error:
+			recordButton
+				.disabled(!viewModel.permissionStatus.isFullyAuthorized)
 		}
 	}
 
