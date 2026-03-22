@@ -54,6 +54,7 @@ final class MockRecordingSession: RecordingSessionProtocol, @unchecked Sendable 
 
 // MARK: - Helpers
 
+@MainActor
 private func makeViewModel(
 	session: MockRecordingSession,
 	totalDuration: TimeInterval = 30.0

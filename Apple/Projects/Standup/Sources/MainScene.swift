@@ -6,7 +6,7 @@ import SwiftUI
 
 struct MainScene: Scene {
 	var body: some Scene {
-		WindowGroup(LocalizedStringKey("main_scene_title")) {
+		WindowGroup("main_scene_title") {
 			MainView()
 		}
 	}

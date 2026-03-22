@@ -1,0 +1,81 @@
+{
+  "sourceLanguage" : "en-US",
+  "strings" : {
+    "%lld" : {
+
+    },
+    "Camera & Microphone Access Required" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Discard" : {
+
+    },
+    "Discard Recording?" : {
+
+    },
+    "Discards this recording and returns to the camera" : {
+
+    },
+    "main_scene_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naked Standup"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+
+    },
+    "Opens the Settings app where you can grant camera and microphone access" : {
+
+    },
+    "Re-record" : {
+
+    },
+    "Record Status Update" : {
+
+    },
+    "Record Update" : {
+
+    },
+    "Recording error: %@" : {
+
+    },
+    "Records a 30-second status video update" : {
+
+    },
+    "Review" : {
+
+    },
+    "Standup" : {
+      "localizations" : {
+        "en-US" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naked Standup"
+          }
+        }
+      }
+    },
+    "Start recording" : {
+
+    },
+    "Stop recording" : {
+
+    },
+    "Stops recording and shows the video for review" : {
+
+    },
+    "This recording will be deleted and you will return to the camera." : {
+
+    }
+  },
+  "version" : "1.1"
+}
