@@ -28,4 +28,10 @@ git restore .specify/memory/constitution.md
 # Install development tools using mise.
 if ($IsMacOS) {
     mise install
+
+    # Generate the Xcode workspace for the Apple applications.
+    Push-Location Apple
+    tuist install
+    tuist generate
+    Pop-Location
 }
