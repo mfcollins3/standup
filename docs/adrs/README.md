@@ -34,4 +34,4 @@ decision, create a new ADR and link it back to the one it replaces.
 
 | # | Title | Status |
 |---|-------|--------|
-| 001 | [Use AVFoundation for Video Capture](001-avfoundation-recording-architecture.md) | Accepted |
+| 001 | [Use AVFoundation for Video Capture](001-avfoundation-recording-architecture.md) | Proposed |
