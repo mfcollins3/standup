@@ -10,8 +10,8 @@
 
 > Project configuration required before any feature code can be written.
 
-- [ ] T001 Add `NSCameraUsageDescription` and `NSMicrophoneUsageDescription` to infoPlist in `Apple/Projects/Standup/Project.swift`
-- [ ] T002 Add `StandupTests` unit test target with dependency on Standup in `Apple/Projects/Standup/Project.swift`
+- [x] T001 Add `NSCameraUsageDescription` and `NSMicrophoneUsageDescription` to infoPlist in `Apple/Projects/Standup/Project.swift`
+- [x] T002 Add `StandupTests` unit test target with dependency on Standup in `Apple/Projects/Standup/Project.swift`
 
 ---
 
@@ -19,8 +19,8 @@
 
 > Blocking prerequisites for all user stories. These are the AVFoundation and UIKit bridge components that every story depends on.
 
-- [ ] T003 [P] Implement RecordingSession AVCaptureSession lifecycle wrapper in `Apple/Projects/Standup/Sources/Recording/RecordingSession.swift`
-- [ ] T004 [P] Implement CameraPreview UIViewRepresentable for AVCaptureVideoPreviewLayer in `Apple/Projects/Standup/Sources/Recording/CameraPreview.swift`
+- [x] T003 [P] Implement RecordingSession AVCaptureSession lifecycle wrapper in `Apple/Projects/Standup/Sources/Recording/RecordingSession.swift`
+- [x] T004 [P] Implement CameraPreview UIViewRepresentable for AVCaptureVideoPreviewLayer in `Apple/Projects/Standup/Sources/Recording/CameraPreview.swift`
 
 ### T003 Details — RecordingSession
 
@@ -48,12 +48,12 @@ Create a `UIView` subclass with `override class var layerClass: AnyClass { AVCap
 >
 > **Independent Test**: Open recording screen → tap record → wait 30 seconds → verify recording stops and a `.mov` file exists in temp directory.
 
-- [ ] T005 [US1] Implement model types (RecordingState, TimerState, TimerUrgency, RecordedVideo, PermissionStatus) in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T006 [US1] Write RecordingViewModelTests for recording start, timer countdown, and auto-stop at zero in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
-- [ ] T007 [US1] Implement RecordingViewModel with state management, permission checking, and countdown timer in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T008 [US1] Implement CountdownTimerView with circular progress gauge and remaining time display in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
-- [ ] T009 [US1] Implement RecordingScreen with camera preview, record button, and timer overlay in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
-- [ ] T010 [US1] Add navigation from MainView to RecordingScreen in `Apple/Projects/Standup/Sources/MainView.swift`
+- [x] T005 [US1] Implement model types (RecordingState, TimerState, TimerUrgency, RecordedVideo, PermissionStatus) in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T006 [US1] Write RecordingViewModelTests for recording start, timer countdown, and auto-stop at zero in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T007 [US1] Implement RecordingViewModel with state management, permission checking, and countdown timer in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T008 [US1] Implement CountdownTimerView with circular progress gauge and remaining time display in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
+- [x] T009 [US1] Implement RecordingScreen with camera preview, record button, and timer overlay in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
+- [x] T010 [US1] Add navigation from MainView to RecordingScreen in `Apple/Projects/Standup/Sources/MainView.swift`
 
 ### T005 Details — Model Types
 
@@ -115,9 +115,9 @@ Replace the placeholder "Hello, World!" with navigation to `RecordingScreen`. Us
 >
 > **Independent Test**: Start recording → observe timer is default color → at 10s remaining, timer turns yellow → at 5s remaining, timer turns red. VoiceOver announces threshold changes.
 
-- [ ] T011 [US2] Write CountdownTimerTests for urgency color mapping and threshold transitions in `Apple/Projects/StandupTests/Sources/Recording/CountdownTimerTests.swift`
-- [ ] T012 [US2] Add color-coded urgency states to CountdownTimerView (default, yellow at 10s, red at 5s) in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
-- [ ] T013 [US2] Add VoiceOver accessibility announcements at 10s and 5s thresholds in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T011 [US2] Write CountdownTimerTests for urgency color mapping and threshold transitions in `Apple/Projects/StandupTests/Sources/Recording/CountdownTimerTests.swift`
+- [x] T012 [US2] Add color-coded urgency states to CountdownTimerView (default, yellow at 10s, red at 5s) in `Apple/Projects/Standup/Sources/Recording/CountdownTimerView.swift`
+- [x] T013 [US2] Add VoiceOver accessibility announcements at 10s and 5s thresholds in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
 
 ### T011 Details — CountdownTimerTests
 
@@ -150,9 +150,9 @@ In `RecordingViewModel`, post `AccessibilityNotification.Announcement` when:
 >
 > **Independent Test**: Record a video → review screen appears → tap play → video plays with audio from start to finish → playback ends and user remains on review screen.
 
-- [ ] T014 [P] [US3] Implement VideoPlayerView wrapping AVKit VideoPlayer for local file playback in `Apple/Projects/Standup/Sources/Recording/VideoPlayerView.swift`
-- [ ] T015 [US3] Implement ReviewScreen with video preview and play button in `Apple/Projects/Standup/Sources/Recording/ReviewScreen.swift`
-- [ ] T016 [US3] Add navigation from RecordingScreen to ReviewScreen on recording completion in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
+- [x] T014 [P] [US3] Implement VideoPlayerView wrapping AVKit VideoPlayer for local file playback in `Apple/Projects/Standup/Sources/Recording/VideoPlayerView.swift`
+- [x] T015 [US3] Implement ReviewScreen with video preview and play button in `Apple/Projects/Standup/Sources/Recording/ReviewScreen.swift`
+- [x] T016 [US3] Add navigation from RecordingScreen to ReviewScreen on recording completion in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
 
 ### T014 Details — VideoPlayerView
 
@@ -182,9 +182,9 @@ Update `RecordingScreen` to observe `RecordingViewModel.recordingState` and navi
 >
 > **Independent Test**: Record a video → review screen → tap re-record → recording screen appears with live preview and 30s timer → old video file no longer exists.
 
-- [ ] T017 [US4] Write tests for re-record state transition and temp file cleanup in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
-- [ ] T018 [US4] Implement reRecord() in RecordingViewModel with video file deletion and state reset in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T019 [US4] Add re-record button with discard confirmation to ReviewScreen in `Apple/Projects/Standup/Sources/Recording/ReviewScreen.swift`
+- [x] T017 [US4] Write tests for re-record state transition and temp file cleanup in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T018 [US4] Implement reRecord() in RecordingViewModel with video file deletion and state reset in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T019 [US4] Add re-record button with discard confirmation to ReviewScreen in `Apple/Projects/Standup/Sources/Recording/ReviewScreen.swift`
 
 ### T017 Details — Re-Record Tests
 
@@ -217,8 +217,8 @@ Add a "Re-record" button to `ReviewScreen`:
 >
 > **Independent Test**: Start recording → tap stop at ~10 seconds → review screen shows video → play back → video is ~10 seconds long.
 
-- [ ] T020 [US5] Write tests for early stop producing partial video with correct duration in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
-- [ ] T021 [US5] Add stop button to RecordingScreen and wire to stopRecording() in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
+- [x] T020 [US5] Write tests for early stop producing partial video with correct duration in `Apple/Projects/StandupTests/Sources/Recording/RecordingViewModelTests.swift`
+- [x] T021 [US5] Add stop button to RecordingScreen and wire to stopRecording() in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
 
 ### T020 Details — Early Stop Tests
 
@@ -242,12 +242,12 @@ Add a stop button to `RecordingScreen`:
 
 > Final quality, accessibility, error handling, and documentation tasks.
 
-- [ ] T022 Implement permission denied UI with guidance to Settings in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
-- [ ] T023 [P] Handle external app interruptions (incoming calls, backgrounding) by preserving partial video in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T023b [P] Handle user-initiated navigation away from recording screen by discarding partial video in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T024 [P] Handle storage full and recording error states in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
-- [ ] T025 [P] Add accessibility labels, hints, and Dynamic Type support to all interactive controls across recording and review screens
-- [ ] T026 [P] Create ADR for AVFoundation recording architecture in `docs/adrs/001-avfoundation-recording-architecture.md`
+- [x] T022 Implement permission denied UI with guidance to Settings in `Apple/Projects/Standup/Sources/Recording/RecordingScreen.swift`
+- [x] T023 [P] Handle external app interruptions (incoming calls, backgrounding) by preserving partial video in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T023b [P] Handle user-initiated navigation away from recording screen by discarding partial video in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T024 [P] Handle storage full and recording error states in `Apple/Projects/Standup/Sources/Recording/RecordingViewModel.swift`
+- [x] T025 [P] Add accessibility labels, hints, and Dynamic Type support to all interactive controls across recording and review screens
+- [x] T026 [P] Create ADR for AVFoundation recording architecture in `docs/adrs/001-avfoundation-recording-architecture.md`
 
 ### T022 Details — Permission Denied UI
 
