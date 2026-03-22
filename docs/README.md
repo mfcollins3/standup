@@ -5,3 +5,4 @@ The following documents are available for your review and contain important tech
 ## Contents
 
 1. [Software Requirements](software_requirements/README.md)
+1. [Architectural Decision Records](adrs/README.md)

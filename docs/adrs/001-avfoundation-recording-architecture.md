@@ -1,6 +1,6 @@
 # 001 - Use AVFoundation for Video Capture
 
-**Status:** Proposed
+**Status:** Accepted
 
 **Date:** 2026-01-01
 
