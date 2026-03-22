@@ -12,7 +12,9 @@ func standupApp() -> Target {
         bundleId: "dev.michaelfcollins3.standup",
         deploymentTargets: .iOS("26.0"),
         infoPlist: .extendingDefault(with: [
-            "UILaunchScreen": [:]
+            "UILaunchScreen": [:],
+            "NSCameraUsageDescription": "Naked Standup uses your camera to record status videos.",
+            "NSMicrophoneUsageDescription": "Naked Standup uses your microphone to record audio for your status videos."
         ]),
         sources: ["Sources/**"],
         resources: .resources(
@@ -164,6 +166,42 @@ func standupApp() -> Target {
     )
 
 }
+func standupTests() -> Target {
+	.target(
+		name: "StandupTests",
+		destinations: [.iPad, .iPhone],
+		product: .unitTests,
+		bundleId: "dev.michaelfcollins3.standup.tests",
+		deploymentTargets: .iOS("26.0"),
+		sources: ["../StandupTests/Sources/**"],
+		dependencies: [
+			.target(name: "Standup")
+		],
+		settings: .settings(
+			base: .init()
+				.automaticCodeSigning(devTeam: "WTG7RTG947")
+				.swiftVersion("6.2"),
+			configurations: [
+				.debug(
+					name: .debug,
+					settings: .init(),
+					xcconfig: .relativeToManifest("Config/Debug.xcconfig")
+				),
+				.release(
+					name: "QA",
+					settings: .init(),
+					xcconfig: .relativeToManifest("Config/QA.xcconfig")
+				),
+				.release(
+					name: .release,
+					settings: .init(),
+					xcconfig: .relativeToManifest("Config/Release.xcconfig")
+				)
+			]
+		)
+	)
+}
+
 let project = Project(
     name: "Standup",
     organizationName: "Michael Collins",
@@ -177,6 +215,7 @@ let project = Project(
         )
     ),
     targets: [
-        standupApp()
-    ]
+		standupApp(),
+		standupTests()
+	]
 )
