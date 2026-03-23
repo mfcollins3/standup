@@ -66,7 +66,8 @@ public sealed class CreateVideo(ISasUrlService sasUrlService)
                     $"File size must be between 1 and {MaxFileSizeBytes} bytes.")));
         }
 
-        var blobPath = $"uploads/anonymous/{Guid.NewGuid()}.mp4";
+        var extension = request.ContentType == "video/quicktime" ? "mov" : "mp4";
+        var blobPath = $"uploads/anonymous/{Guid.NewGuid()}.{extension}";
         var result = await sasUrlService.GenerateSasUrlAsync(blobPath, cancellationToken);
 
         return new OkObjectResult(

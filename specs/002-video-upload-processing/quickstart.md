@@ -18,7 +18,7 @@ This provisions:
 - Azure Functions App (Consumption plan, .NET 10 isolated worker)
 - Azure API Management (Consumption tier)
 - Azure Key Vault
-- All RBAC role assignments (managed identity → Storage Blob Delegator + Data Contributor)
+- All RBAC role assignments (managed identity → Storage Blob Delegator + Storage Blob Data Contributor)
 
 After provisioning, note the APIM subscription key from the Azure Portal:
 **Portal → API Management → Subscriptions → ios-client-subscription → Show Primary Key**

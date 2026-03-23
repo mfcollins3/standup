@@ -13,9 +13,14 @@ var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
     .ConfigureServices(services =>
     {
-        services.AddSingleton(_ => new BlobServiceClient(
-            new Uri(Environment.GetEnvironmentVariable("AZURE_STORAGE_BLOB_ENDPOINT")!),
-            new DefaultAzureCredential()));
+        services.AddSingleton(_ =>
+        {
+            var blobEndpoint = Environment.GetEnvironmentVariable("AZURE_STORAGE_BLOB_ENDPOINT")
+                ?? throw new InvalidOperationException(
+                    "Required configuration setting 'AZURE_STORAGE_BLOB_ENDPOINT' is missing. " +
+                    "Ensure this environment variable is set in the Function App configuration.");
+            return new BlobServiceClient(new Uri(blobEndpoint), new DefaultAzureCredential());
+        });
         services.AddSingleton<ISasUrlService, SasUrlService>();
     })
     .Build();

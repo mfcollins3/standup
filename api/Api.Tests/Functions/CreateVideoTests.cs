@@ -122,6 +122,25 @@ public sealed class CreateVideoTests
     }
 
     [Fact]
+    public async Task RunAsync_QuicktimeRequest_BlobPathUsesMovExtension()
+    {
+        var expectedExpiry = DateTimeOffset.UtcNow.AddMinutes(15);
+        string? capturedBlobPath = null;
+        _mockSasService
+            .Setup(s => s.GenerateSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((path, _) => capturedBlobPath = path)
+            .ReturnsAsync(new SasUrlResult(FakeSasUri, expectedExpiry));
+
+        var req = BuildRequest(new { contentType = "video/quicktime", fileSizeBytes = 1_000_000 });
+        await _function.RunAsync(req, CancellationToken.None);
+
+        Assert.NotNull(capturedBlobPath);
+        Assert.Matches(
+            new Regex(@"^uploads/[^/]+/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.mov$"),
+            capturedBlobPath);
+    }
+
+    [Fact]
     public async Task RunAsync_ValidRequest_ExpiresAtIsApproximately15MinutesFromNow()
     {
         var expectedExpiry = DateTimeOffset.UtcNow.AddMinutes(15);
