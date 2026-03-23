@@ -9,8 +9,3 @@ services:
     host: function
     language: dotnet
     project: ./api
-  web:
-    # placeholder for future frontend deployment
-
-infra:
-  path: infra/main.bicep

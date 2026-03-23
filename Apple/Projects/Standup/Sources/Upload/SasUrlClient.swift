@@ -48,7 +48,7 @@ enum SasUrlClientError: Error, Equatable {
 
 // MARK: - Protocol
 
-protocol SasUrlFetching: AnyObject {
+protocol SasUrlFetching: AnyObject, Sendable {
 	func fetchSasUrl(for request: SasUrlRequest) async throws -> SasUrlResponse
 }
 
@@ -78,6 +78,13 @@ final class SasUrlClient: SasUrlFetching {
 			throw SasUrlClientError.invalidRequest("Failed to encode request body: \(error)")
 		}
 
+		#if DEBUG
+		if let body = urlRequest.httpBody, let bodyStr = String(data: body, encoding: .utf8) {
+			print("[SasUrlClient] POST \(url)")
+			print("[SasUrlClient] Request body: \(bodyStr)")
+		}
+		#endif
+
 		let data: Data
 		let response: URLResponse
 		do {
@@ -105,6 +112,10 @@ final class SasUrlClient: SasUrlFetching {
 		case 401:
 			throw SasUrlClientError.unauthorized
 		case 415:
+			#if DEBUG
+			let responseBody = String(data: data, encoding: .utf8) ?? "<unreadable>"
+			print("[SasUrlClient] 415 response body: \(responseBody)")
+			#endif
 			throw SasUrlClientError.unsupportedMediaType
 		default:
 			throw SasUrlClientError.serverError(httpResponse.statusCode)

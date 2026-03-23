@@ -5,7 +5,7 @@
 @description('The name of the Function App.')
 param name string
 
-@description('The name of the App Service Plan (Consumption).')
+@description('The name of the App Service Plan (Flex Consumption).')
 param planName string
 
 @description('The Azure region in which to deploy resources.')
@@ -29,21 +29,41 @@ var storageBlobDelegatorRoleId = 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a'
 // Storage Blob Data Contributor role — allows generating SAS tokens for blob write access
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+// Storage Blob Data Owner role — required by Flex Consumption for deployment package storage access
+var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+	name: storageAccountName
+
+	resource blobService 'blobServices' existing = {
+		name: 'default'
+	}
+}
+
+// Container for the function app deployment package
+resource deploymentPackageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+	name: 'deploymentpackage'
+	parent: storageAccount::blobService
+	properties: {
+		publicAccess: 'None'
+	}
+}
+
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
 	name: planName
 	location: location
 	tags: tags
 	kind: 'functionapp'
 	sku: {
-		name: 'Y1'
-		tier: 'Dynamic'
+		name: 'FC1'
+		tier: 'FlexConsumption'
 	}
 	properties: {
 		reserved: true
 	}
 }
 
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 	name: name
 	location: location
 	tags: union(tags, {
@@ -57,8 +77,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 		serverFarmId: appServicePlan.id
 		httpsOnly: true
 		siteConfig: {
-			linuxFxVersion: 'DOTNET-ISOLATED|10.0'
-			functionAppScaleLimit: 200
 			appSettings: [
 				{
 					name: 'AzureWebJobsStorage__accountName'
@@ -69,14 +87,29 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 					value: '~4'
 				}
 				{
-					name: 'FUNCTIONS_WORKER_RUNTIME'
-					value: 'dotnet-isolated'
-				}
-				{
 					name: 'AZURE_STORAGE_BLOB_ENDPOINT'
 					value: storageAccountBlobEndpoint
 				}
 			]
+		}
+		functionAppConfig: {
+			deployment: {
+				storage: {
+					type: 'blobContainer'
+					value: '${storageAccountBlobEndpoint}${deploymentPackageContainer.name}'
+					authentication: {
+						type: 'SystemAssignedIdentity'
+					}
+				}
+			}
+			scaleAndConcurrency: {
+				maximumInstanceCount: 200
+				instanceMemoryMB: 2048
+			}
+			runtime: {
+				name: 'dotnet-isolated'
+				version: '10.0'
+			}
 		}
 	}
 }
@@ -101,6 +134,17 @@ resource storageBlobDataContributorAssignment 'Microsoft.Authorization/roleAssig
 	}
 }
 
+// Storage Blob Data Owner is required for Flex Consumption deployment package storage access
+resource storageBlobDataOwnerAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+	name: guid(storageAccountId, functionApp.id, storageBlobDataOwnerRoleId)
+	scope: resourceGroup()
+	properties: {
+		roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
+		principalId: functionApp.identity.principalId
+		principalType: 'ServicePrincipal'
+	}
+}
+
 @description('The resource ID of the Function App.')
 output id string = functionApp.id
 
@@ -112,3 +156,7 @@ output principalId string = functionApp.identity.principalId
 
 @description('The default hostname of the Function App.')
 output defaultHostName string = functionApp.properties.defaultHostName
+
+@description('The default host key of the Function App.')
+@secure()
+output hostKey string = listKeys('${functionApp.id}/host/default', '2024-04-01').functionKeys.default

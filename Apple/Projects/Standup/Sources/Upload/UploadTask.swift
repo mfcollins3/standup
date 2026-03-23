@@ -73,6 +73,7 @@ final class UploadTask: Identifiable {
 		case (.pending, .cancelled): return true
 		case (.uploading, .completed): return true
 		case (.uploading, .retrying): return true
+		case (.uploading, .failed): return true
 		case (.uploading, .cancelled): return true
 		case (.retrying, .uploading): return true
 		case (.retrying, .failed): return true

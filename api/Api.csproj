@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Standup.Api</RootNamespace>
     <AssemblyName>Standup.Api</AssemblyName>
+    <UserSecretsId>160b1ea6-8131-4ea7-a90f-f1861e02ca88</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

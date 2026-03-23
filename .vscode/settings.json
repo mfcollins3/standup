@@ -10,6 +10,11 @@
         ".specify/scripts/bash/": true,
         ".specify/scripts/powershell/": true
     },
-    "chat.useAgentSkills": true
+    "chat.useAgentSkills": true,
+    "azureFunctions.deploySubpath": "api/bin/Release/net10.0/publish",
+    "azureFunctions.projectLanguage": "C#",
+    "azureFunctions.projectRuntime": "~4",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.preDeployTask": "publish (functions)"
 }
 

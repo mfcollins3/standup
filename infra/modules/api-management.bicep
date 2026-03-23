@@ -54,6 +54,7 @@ resource functionKeyNamedValue 'Microsoft.ApiManagement/service/namedValues@2023
 resource functionAppBackend 'Microsoft.ApiManagement/service/backends@2023-09-01-preview' = {
 	parent: apimService
 	name: 'standup-api-backend'
+	dependsOn: [functionKeyNamedValue]
 	properties: {
 		description: 'Standup API Function App backend'
 		url: 'https://${functionAppUrl}/api'
@@ -124,6 +125,7 @@ resource createVideoOperation 'Microsoft.ApiManagement/service/apis/operations@2
 resource standupApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {
 	parent: standupApi
 	name: 'policy'
+	dependsOn: [functionAppBackend, functionKeyNamedValue]
 	properties: {
 		format: 'xml'
 		value: '''

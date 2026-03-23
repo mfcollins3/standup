@@ -15,8 +15,8 @@ let workspace = Workspace(
         // See LICENSE.md for license terms
         """,
     additionalFiles: [
-        "README.md",
-        "LICENSE.md"
+        "../README.md",
+        "../LICENSE.md"
     ],
     generationOptions: .options(renderMarkdownReadme: true)
 )

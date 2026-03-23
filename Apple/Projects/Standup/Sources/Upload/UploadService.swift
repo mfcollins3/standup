@@ -75,7 +75,6 @@ final class BackgroundUploadExecutor: NSObject, UploadExecuting, @unchecked Send
 		}
 
 		let task = urlSession.uploadTask(with: request, fromFile: fileURL)
-		task.taskIdentifier
 		// Store mapping from URLSessionTask.taskIdentifier to our identifier
 		lock.lock()
 		sessionToOurIdentifier[task.taskIdentifier] = identifier
@@ -151,7 +150,7 @@ extension BackgroundUploadExecutor: URLSessionTaskDelegate {
 @Observable @MainActor
 final class UploadService {
 	let retryDelayBase: Double
-	private let maxRetries = 3
+	private let maxRetries = 2
 	private let sasUrlClient: SasUrlFetching
 	private let uploadExecutor: UploadExecuting
 	private(set) var uploadTasks: [UploadTask] = []

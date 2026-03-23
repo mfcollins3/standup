@@ -9,7 +9,7 @@ import Testing
 // MARK: - Mock URLProtocol
 
 private final class MockURLProtocol: URLProtocol, @unchecked Sendable {
-	static var requestHandler: (@Sendable (URLRequest) throws -> (HTTPURLResponse, Data))?
+	nonisolated(unsafe) static var requestHandler: (@Sendable (URLRequest) throws -> (HTTPURLResponse, Data))?
 
 	override class func canInit(with request: URLRequest) -> Bool { true }
 	override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -32,6 +32,10 @@ private final class MockURLProtocol: URLProtocol, @unchecked Sendable {
 	override func stopLoading() {}
 }
 
+private final class CaptureBox<T>: @unchecked Sendable {
+	var value: T?
+}
+
 // MARK: - Helpers
 
 private func makeMockSession() -> URLSession {
@@ -52,6 +56,21 @@ private func makeSasUrlRequest() -> SasUrlRequest {
 	SasUrlRequest(contentType: "video/mp4", fileSizeBytes: 1_024_000)
 }
 
+private func bodyData(from request: URLRequest) -> Data? {
+	if let data = request.httpBody { return data }
+	guard let stream = request.httpBodyStream else { return nil }
+	stream.open()
+	defer { stream.close() }
+	var data = Data()
+	let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 1024)
+	defer { buffer.deallocate() }
+	while stream.hasBytesAvailable {
+		let read = stream.read(buffer, maxLength: 1024)
+		if read > 0 { data.append(buffer, count: read) }
+	}
+	return data
+}
+
 private func makeJSONResponse(statusCode: Int, body: [String: Any]) -> (HTTPURLResponse, Data) {
 	let response = HTTPURLResponse(
 		url: URL(string: "https://api.test.local/video")!,
@@ -65,7 +84,7 @@ private func makeJSONResponse(statusCode: Int, body: [String: Any]) -> (HTTPURLR
 
 // MARK: - SasUrlClient Tests (T014)
 
-@Suite(.serialized, "SasUrlClient")
+@Suite("SasUrlClient", .serialized)
 struct SasUrlClientTests {
 
 	@Test("200 response decodes SasUrlResponse")
@@ -83,23 +102,23 @@ struct SasUrlClientTests {
 
 	@Test("request includes X-Api-Key header")
 	func requestIncludesApiKeyHeader() async throws {
-		var capturedRequest: URLRequest?
+		let box = CaptureBox<URLRequest>()
 		MockURLProtocol.requestHandler = { request in
-			capturedRequest = request
+			box.value = request
 			return makeJSONResponse(statusCode: 200, body: [
 				"uploadUrl": "https://x",
 				"expiresAt": "2026-01-01T00:00:00Z"
 			])
 		}
 		_ = try await makeClient().fetchSasUrl(for: makeSasUrlRequest())
-		#expect(capturedRequest?.value(forHTTPHeaderField: "X-Api-Key") == "test-api-key")
+		#expect(box.value?.value(forHTTPHeaderField: "X-Api-Key") == "test-api-key")
 	}
 
 	@Test("request encodes contentType and fileSizeBytes in body")
 	func requestBodyEncodesFields() async throws {
-		var capturedRequest: URLRequest?
+		let box = CaptureBox<URLRequest>()
 		MockURLProtocol.requestHandler = { request in
-			capturedRequest = request
+			box.value = request
 			return makeJSONResponse(statusCode: 200, body: [
 				"uploadUrl": "https://x",
 				"expiresAt": "2026-01-01T00:00:00Z"
@@ -107,23 +126,23 @@ struct SasUrlClientTests {
 		}
 		let req = SasUrlRequest(contentType: "video/mp4", fileSizeBytes: 5_000_000)
 		_ = try await makeClient().fetchSasUrl(for: req)
-		let body = try JSONDecoder().decode(SasUrlRequest.self, from: capturedRequest!.httpBody!)
+		let body = try JSONDecoder().decode(SasUrlRequest.self, from: try #require(bodyData(from: box.value!)))
 		#expect(body.contentType == "video/mp4")
 		#expect(body.fileSizeBytes == 5_000_000)
 	}
 
 	@Test("request uses POST method")
 	func requestUsesPostMethod() async throws {
-		var capturedRequest: URLRequest?
+		let box = CaptureBox<URLRequest>()
 		MockURLProtocol.requestHandler = { request in
-			capturedRequest = request
+			box.value = request
 			return makeJSONResponse(statusCode: 200, body: [
 				"uploadUrl": "https://x",
 				"expiresAt": "2026-01-01T00:00:00Z"
 			])
 		}
 		_ = try await makeClient().fetchSasUrl(for: makeSasUrlRequest())
-		#expect(capturedRequest?.httpMethod == "POST")
+		#expect(box.value?.httpMethod == "POST")
 	}
 
 	@Test("400 response throws .invalidRequest")

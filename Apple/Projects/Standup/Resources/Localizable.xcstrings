@@ -1,22 +1,16 @@
 {
   "sourceLanguage" : "en-US",
   "strings" : {
-    "%lld" : {
+    "%@" : {
+
+    },
+    "%@%%" : {
 
     },
     "Camera & Microphone Access Required" : {
 
     },
-    "Cancel" : {
-
-    },
-    "Discard" : {
-
-    },
-    "Discard Recording?" : {
-
-    },
-    "Discards this recording and returns to the camera" : {
+    "Cancelled" : {
 
     },
     "main_scene_title" : {
@@ -30,31 +24,11 @@
         }
       }
     },
-    "Open Settings" : {
-
-    },
-    "Opens the Settings app where you can grant camera and microphone access" : {
-
-    },
-    "Re-record" : {
-
-    },
-    "Record Status Update" : {
-
-    },
-    "Record Update" : {
-
-    },
-    "Recording error: %@" : {
-
-    },
-    "Records a 30-second status video update" : {
-
-    },
-    "Review" : {
+    "Retry %@ of 3" : {
 
     },
     "Standup" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en-US" : {
           "stringUnit" : {
@@ -64,16 +38,19 @@
         }
       }
     },
-    "Start recording" : {
-
-    },
-    "Stop recording" : {
-
-    },
-    "Stops recording and shows the video for review" : {
+    "The video will not be uploaded." : {
 
     },
     "This recording will be deleted and you will return to the camera." : {
+
+    },
+    "Upload failed" : {
+
+    },
+    "Uploaded" : {
+
+    },
+    "Waiting to upload…" : {
 
     }
   },

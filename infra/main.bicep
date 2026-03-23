@@ -14,7 +14,7 @@ param environmentName string
 param location string
 
 @description('The publisher email address for the API Management instance.')
-param publisherEmail string = 'admin@nakedstandup.app'
+param publisherEmail string = 'support@nakedstandup.app'
 
 @description('The publisher name for the API Management instance.')
 param publisherName string = 'Naked Standup'
@@ -76,7 +76,7 @@ module apim './modules/api-management.bicep' = {
 		location: location
 		tags: tags
 		functionAppUrl: functionApp.outputs.defaultHostName
-		functionKey: ''
+		functionKey: functionApp.outputs.hostKey
 		publisherEmail: publisherEmail
 		publisherName: publisherName
 	}

@@ -2,6 +2,7 @@
 // Licensed under the Naked Standup Source-Available Temporary License
 // See LICENSE.md for license terms.
 
+import Foundation
 import Testing
 @testable import Standup
 
