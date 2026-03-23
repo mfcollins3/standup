@@ -9,7 +9,10 @@ struct ReviewScreen: View {
     let viewModel: RecordingViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(UploadService.self) private var uploadService
     @State private var showDiscardAlert = false
+    @State private var showUploadError = false
+    @State private var uploadError: Error?
 
     var body: some View {
         VideoPlayerView(videoURL: videoURL)
@@ -17,7 +20,7 @@ struct ReviewScreen: View {
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button(role: .destructive) {
                         showDiscardAlert = true
                     } label: {
@@ -26,6 +29,18 @@ struct ReviewScreen: View {
                     .accessibilityLabel("Re-record")
                     .accessibilityHint("Discards this recording and returns to the camera")
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Submit") {
+                        Task { await submitVideo() }
+                    }
+                    .accessibilityLabel("Submit video")
+                    .accessibilityHint("Uploads this recording to your standup feed")
+                }
+            }
+            .alert("Upload Failed", isPresented: $showUploadError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(uploadError?.localizedDescription ?? "An unknown error occurred.")
             }
             .alert("Discard Recording?", isPresented: $showDiscardAlert) {
                 Button("Discard", role: .destructive) {
@@ -42,5 +57,15 @@ struct ReviewScreen: View {
                     viewModel.reRecord()
                 }
             }
+    }
+
+    private func submitVideo() async {
+        do {
+            try await uploadService.submit(videoAt: videoURL)
+            dismiss()
+        } catch {
+            uploadError = error
+            showUploadError = true
+        }
     }
 }

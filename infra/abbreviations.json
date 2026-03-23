@@ -1,0 +1,10 @@
+{
+	"storageAccount": "st",
+	"functionApp": "func",
+	"appServicePlan": "plan",
+	"apiManagement": "apim",
+	"keyVault": "kv",
+	"resourceGroup": "rg",
+	"eventGridSystemTopic": "evgt",
+	"eventGridSubscription": "evgs"
+}

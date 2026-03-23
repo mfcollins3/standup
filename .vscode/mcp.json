@@ -1,9 +1,17 @@
 {
-    "servers": {
-        "apple-docs": {
-            "type": "stdio",
-            "command": "npx",
-            "args": ["-y", "@kimsungwhee/apple-docs-mcp"]
-        }
-    }
+	"servers": {
+		"apple-docs": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@kimsungwhee/apple-docs-mcp"
+			]
+		},
+		"microsoft-learn": {
+			"type": "http",
+			"url": "https://learn.microsoft.com/api/mcp"
+		}
+	},
+	"inputs": []
 }
