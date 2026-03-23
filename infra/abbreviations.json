@@ -4,6 +4,8 @@
 	"appServicePlan": "plan",
 	"apiManagement": "apim",
 	"keyVault": "kv",
+	"logAnalyticsWorkspace": "log",
+	"applicationInsights": "appi",
 	"resourceGroup": "rg",
 	"eventGridSystemTopic": "evgt",
 	"eventGridSubscription": "evgs"

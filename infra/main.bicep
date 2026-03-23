@@ -32,6 +32,17 @@ resource resourceGroup 'Microsoft.Resources/resourceGroups@2022-09-01' = {
 	tags: tags
 }
 
+module monitoring './modules/monitoring.bicep' = {
+	name: 'monitoring'
+	scope: resourceGroup
+	params: {
+		name: '${abbrs.applicationInsights}-standup-${resourceToken}'
+		logAnalyticsWorkspaceName: '${abbrs.logAnalyticsWorkspace}-standup-${resourceToken}'
+		location: location
+		tags: tags
+	}
+}
+
 module storage './modules/storage.bicep' = {
 	name: 'storage'
 	scope: resourceGroup
@@ -53,6 +64,7 @@ module functionApp './modules/function-app.bicep' = {
 		storageAccountId: storage.outputs.id
 		storageAccountName: storage.outputs.name
 		storageAccountBlobEndpoint: storage.outputs.primaryBlobEndpoint
+		appInsightsConnectionString: monitoring.outputs.connectionString
 	}
 }
 
@@ -65,6 +77,7 @@ module keyVault './modules/key-vault.bicep' = {
 		tags: tags
 		functionAppPrincipalId: functionApp.outputs.principalId
 		apimPrincipalId: apim.outputs.principalId
+		logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
 	}
 }
 
@@ -79,6 +92,8 @@ module apim './modules/api-management.bicep' = {
 		functionKey: functionApp.outputs.hostKey
 		publisherEmail: publisherEmail
 		publisherName: publisherName
+		appInsightsId: monitoring.outputs.id
+		appInsightsInstrumentationKey: monitoring.outputs.instrumentationKey
 	}
 }
 
@@ -108,3 +123,12 @@ output AZURE_KEY_VAULT_URI string = keyVault.outputs.vaultUri
 
 @description('The name of the resource group.')
 output AZURE_RESOURCE_GROUP string = resourceGroup.name
+
+@description('The name of the Application Insights instance.')
+output AZURE_APPLICATION_INSIGHTS_NAME string = monitoring.outputs.name
+
+@description('The connection string of the Application Insights instance.')
+output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = monitoring.outputs.connectionString
+
+@description('The name of the Log Analytics Workspace.')
+output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = monitoring.outputs.logAnalyticsWorkspaceName

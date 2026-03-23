@@ -24,6 +24,13 @@ param publisherEmail string
 @description('The publisher name for the APIM instance.')
 param publisherName string
 
+@description('The resource ID of the Application Insights instance.')
+param appInsightsId string
+
+@description('The instrumentation key of the Application Insights instance.')
+@secure()
+param appInsightsInstrumentationKey string
+
 resource apimService 'Microsoft.ApiManagement/service@2023-09-01-preview' = {
 	name: name
 	location: location
@@ -155,6 +162,62 @@ resource standupApiSubscription 'Microsoft.ApiManagement/service/subscriptions@2
 		displayName: 'Standup iOS Client'
 		scope: standupApi.id
 		state: 'active'
+	}
+}
+
+resource appInsightsLogger 'Microsoft.ApiManagement/service/loggers@2023-09-01-preview' = {
+	parent: apimService
+	name: 'applicationinsights-logger'
+	properties: {
+		loggerType: 'applicationInsights'
+		description: 'Application Insights logger'
+		credentials: {
+			instrumentationKey: appInsightsInstrumentationKey
+		}
+		isBuffered: true
+		resourceId: appInsightsId
+	}
+}
+
+resource apimDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2023-09-01-preview' = {
+	parent: apimService
+	name: 'applicationinsights'
+	properties: {
+		alwaysLog: 'allErrors'
+		loggerId: appInsightsLogger.id
+		logClientIp: true
+		sampling: {
+			samplingType: 'fixed'
+			percentage: 100
+		}
+		frontend: {
+			request: {
+				headers: []
+				body: {
+					bytes: 0
+				}
+			}
+			response: {
+				headers: []
+				body: {
+					bytes: 0
+				}
+			}
+		}
+		backend: {
+			request: {
+				headers: []
+				body: {
+					bytes: 0
+				}
+			}
+			response: {
+				headers: []
+				body: {
+					bytes: 0
+				}
+			}
+		}
 	}
 }
 

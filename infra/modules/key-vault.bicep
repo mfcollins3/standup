@@ -17,6 +17,9 @@ param functionAppPrincipalId string
 @description('The principal ID of the APIM managed identity, granted Key Vault Secrets User role.')
 param apimPrincipalId string
 
+@description('The resource ID of the Log Analytics Workspace for diagnostic settings.')
+param logAnalyticsWorkspaceId string
+
 // Key Vault Secrets Officer role — allows the Function App to set the host key secret
 var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
@@ -56,6 +59,26 @@ resource apimSecretsUserAssignment 'Microsoft.Authorization/roleAssignments@2022
 		roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
 		principalId: apimPrincipalId
 		principalType: 'ServicePrincipal'
+	}
+}
+
+resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+	name: 'key-vault-diagnostics'
+	scope: keyVault
+	properties: {
+		workspaceId: logAnalyticsWorkspaceId
+		logs: [
+			{
+				categoryGroup: 'audit'
+				enabled: true
+			}
+		]
+		metrics: [
+			{
+				category: 'AllMetrics'
+				enabled: true
+			}
+		]
 	}
 }
 
