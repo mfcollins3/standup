@@ -128,6 +128,7 @@ output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output AZURE_APPLICATION_INSIGHTS_NAME string = monitoring.outputs.name
 
 @description('The connection string of the Application Insights instance.')
+@secure()
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = monitoring.outputs.connectionString
 
 @description('The name of the Log Analytics Workspace.')

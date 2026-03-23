@@ -7,10 +7,31 @@
     "%@%%" : {
 
     },
+    "%lld" : {
+
+    },
     "Camera & Microphone Access Required" : {
 
     },
+    "Cancel" : {
+
+    },
+    "Cancel Upload" : {
+
+    },
+    "Cancel Upload?" : {
+
+    },
     "Cancelled" : {
+
+    },
+    "Discard" : {
+
+    },
+    "Discard Recording?" : {
+
+    },
+    "Discards this recording and returns to the camera" : {
 
     },
     "main_scene_title" : {
@@ -24,7 +45,34 @@
         }
       }
     },
+    "Open Settings" : {
+
+    },
+    "Opens the Settings app where you can grant camera and microphone access" : {
+
+    },
+    "Re-record" : {
+
+    },
+    "Record Status Update" : {
+
+    },
+    "Record Update" : {
+
+    },
+    "Recording error: %@" : {
+
+    },
+    "Records a 30-second status video update" : {
+
+    },
+    "Retry" : {
+
+    },
     "Retry %@ of 3" : {
+
+    },
+    "Review" : {
 
     },
     "Standup" : {
@@ -37,6 +85,18 @@
           }
         }
       }
+    },
+    "Start recording" : {
+
+    },
+    "Stop recording" : {
+
+    },
+    "Stops recording and shows the video for review" : {
+
+    },
+    "Submit" : {
+
     },
     "The video will not be uploaded." : {
 

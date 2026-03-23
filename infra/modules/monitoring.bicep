@@ -44,9 +44,11 @@ output id string = applicationInsights.id
 output name string = applicationInsights.name
 
 @description('The connection string for the Application Insights instance.')
+@secure()
 output connectionString string = applicationInsights.properties.ConnectionString
 
 @description('The instrumentation key for the Application Insights instance.')
+@secure()
 output instrumentationKey string = applicationInsights.properties.InstrumentationKey
 
 @description('The resource ID of the Log Analytics Workspace.')
