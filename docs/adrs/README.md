@@ -35,3 +35,5 @@ decision, create a new ADR and link it back to the one it replaces.
 | # | Title | Status |
 |---|-------|--------|
 | 001 | [Use AVFoundation for Video Capture](001-avfoundation-recording-architecture.md) | Proposed |
+| 002 | [Direct-to-Blob Upload via SAS URL](002-video-upload-architecture.md) | Proposed |
+| 003 | [Use Application Insights for Backend Observability](003-application-insights-monitoring.md) | Proposed |

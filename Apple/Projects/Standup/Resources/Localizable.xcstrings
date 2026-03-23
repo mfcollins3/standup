@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "en-US",
   "strings" : {
+    "%@" : {
+
+    },
+    "%@%%" : {
+
+    },
     "%lld" : {
 
     },
@@ -8,6 +14,15 @@
 
     },
     "Cancel" : {
+
+    },
+    "Cancel Upload" : {
+
+    },
+    "Cancel Upload?" : {
+
+    },
+    "Cancelled" : {
 
     },
     "Discard" : {
@@ -51,10 +66,17 @@
     "Records a 30-second status video update" : {
 
     },
+    "Retry" : {
+
+    },
+    "Retry %@ of 3" : {
+
+    },
     "Review" : {
 
     },
     "Standup" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en-US" : {
           "stringUnit" : {
@@ -73,7 +95,22 @@
     "Stops recording and shows the video for review" : {
 
     },
+    "Submit" : {
+
+    },
+    "The video will not be uploaded." : {
+
+    },
     "This recording will be deleted and you will return to the camera." : {
+
+    },
+    "Upload failed" : {
+
+    },
+    "Uploaded" : {
+
+    },
+    "Waiting to upload…" : {
 
     }
   },

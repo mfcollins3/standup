@@ -1,0 +1,1213 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.23.1.45101",
+      "templateHash": "8560613244539196472"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "metadata": {
+        "description": "The name of the environment (e.g. dev, qa, prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "The Azure region in which to deploy resources."
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "defaultValue": "support@nakedstandup.app",
+      "metadata": {
+        "description": "The publisher email address for the API Management instance."
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "defaultValue": "Naked Standup",
+      "metadata": {
+        "description": "The publisher name for the API Management instance."
+      }
+    }
+  },
+  "variables": {
+    "$fxv#0": {
+      "storageAccount": "st",
+      "functionApp": "func",
+      "appServicePlan": "plan",
+      "apiManagement": "apim",
+      "keyVault": "kv",
+      "logAnalyticsWorkspace": "log",
+      "applicationInsights": "appi",
+      "resourceGroup": "rg",
+      "eventGridSystemTopic": "evgt",
+      "eventGridSubscription": "evgs"
+    },
+    "abbrs": "[variables('$fxv#0')]",
+    "resourceToken": "[toLower(uniqueString(subscription().id, parameters('environmentName'), parameters('location')))]",
+    "tags": {
+      "azd-env-name": "[parameters('environmentName')]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "monitoring",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').applicationInsights, variables('resourceToken'))]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').logAnalyticsWorkspace, variables('resourceToken'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "14897696134999214438"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Application Insights instance."
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Log Analytics Workspace."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy resources."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('logAnalyticsWorkspaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Application Insights instance."
+              },
+              "value": "[resourceId('Microsoft.Insights/components', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Application Insights instance."
+              },
+              "value": "[parameters('name')]"
+            },
+            "connectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "The connection string for the Application Insights instance."
+              },
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').ConnectionString]"
+            },
+            "instrumentationKey": {
+              "type": "string",
+              "metadata": {
+                "description": "The instrumentation key for the Application Insights instance."
+              },
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Log Analytics Workspace."
+              },
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Log Analytics Workspace."
+              },
+              "value": "[parameters('logAnalyticsWorkspaceName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storage",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}standup{1}', variables('abbrs').storageAccount, variables('resourceToken'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "12194176015970506166"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the storage account."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy the storage account."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to the storage account."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'status-videos')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the storage account."
+              },
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the storage account."
+              },
+              "value": "[parameters('name')]"
+            },
+            "primaryBlobEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "The primary blob service endpoint of the storage account."
+              },
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-05-01').primaryEndpoints.blob]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "function-app",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').functionApp, variables('resourceToken'))]"
+          },
+          "planName": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').appServicePlan, variables('resourceToken'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "storageAccountId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.id.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.name.value]"
+          },
+          "storageAccountBlobEndpoint": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.primaryBlobEndpoint.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.connectionString.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "11839856004085231617"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Function App."
+              }
+            },
+            "planName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the App Service Plan (Flex Consumption)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy resources."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the video storage account."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the video storage account."
+              }
+            },
+            "storageAccountBlobEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "The primary blob endpoint of the video storage account."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "The connection string for the Application Insights instance."
+              }
+            }
+          },
+          "variables": {
+            "storageBlobDelegatorRoleId": "db58b8e5-c6ad-4a2a-8342-4190687cbf4a",
+            "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+            "storageBlobDataOwnerRoleId": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', 'deploymentpackage')]",
+              "properties": {
+                "publicAccess": "None"
+              }
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('planName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp",
+              "sku": {
+                "name": "FC1",
+                "tier": "FlexConsumption"
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[union(parameters('tags'), createObject('azd-service-name', 'api'))]",
+              "kind": "functionapp,linux",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsStorage__accountName",
+                      "value": "[parameters('storageAccountName')]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~4"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "AZURE_STORAGE_BLOB_ENDPOINT",
+                      "value": "[parameters('storageAccountBlobEndpoint')]"
+                    }
+                  ]
+                },
+                "functionAppConfig": {
+                  "deployment": {
+                    "storage": {
+                      "type": "blobContainer",
+                      "value": "[format('{0}{1}', parameters('storageAccountBlobEndpoint'), 'deploymentpackage')]",
+                      "authentication": {
+                        "type": "SystemAssignedIdentity"
+                      }
+                    }
+                  },
+                  "scaleAndConcurrency": {
+                    "maximumInstanceCount": 200,
+                    "instanceMemoryMB": 2048
+                  },
+                  "runtime": {
+                    "name": "dotnet-isolated",
+                    "version": "10.0"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', 'deploymentpackage')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.Web/sites', parameters('name')), variables('storageBlobDelegatorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDelegatorRoleId'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.Web/sites', parameters('name')), variables('storageBlobDataContributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('storageAccountId'), resourceId('Microsoft.Web/sites', parameters('name')), variables('storageBlobDataOwnerRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataOwnerRoleId'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Function App."
+              },
+              "value": "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Function App."
+              },
+              "value": "[parameters('name')]"
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the Function App managed identity."
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2024-04-01', 'full').identity.principalId]"
+            },
+            "defaultHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "The default hostname of the Function App."
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2024-04-01').defaultHostName]"
+            },
+            "hostKey": {
+              "type": "string",
+              "metadata": {
+                "description": "The default host key of the Function App."
+              },
+              "value": "[listKeys(format('{0}/host/default', resourceId('Microsoft.Web/sites', parameters('name'))), '2024-04-01').functionKeys.default]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "key-vault",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').keyVault, variables('resourceToken'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "functionAppPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.principalId.value]"
+          },
+          "apimPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'api-management'), '2022-09-01').outputs.principalId.value]"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.logAnalyticsWorkspaceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "6271026621046257363"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Key Vault."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy the Key Vault."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to the Key Vault."
+              }
+            },
+            "functionAppPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the Function App managed identity, granted Key Vault Secrets Officer role."
+              }
+            },
+            "apimPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the APIM managed identity, granted Key Vault Secrets User role."
+              }
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Log Analytics Workspace for diagnostic settings."
+              }
+            }
+          },
+          "variables": {
+            "keyVaultSecretsOfficerRoleId": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7",
+            "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('name')), parameters('functionAppPrincipalId'), variables('keyVaultSecretsOfficerRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsOfficerRoleId'))]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('name')), parameters('apimPrincipalId'), variables('keyVaultSecretsUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]",
+                "principalId": "[parameters('apimPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('name'))]",
+              "name": "key-vault-diagnostics",
+              "properties": {
+                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "audit",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Key Vault."
+              },
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Key Vault."
+              },
+              "value": "[parameters('name')]"
+            },
+            "vaultUri": {
+              "type": "string",
+              "metadata": {
+                "description": "The URI of the Key Vault."
+              },
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('name')), '2023-07-01').vaultUri]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'api-management')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "api-management",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').apiManagement, variables('resourceToken'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "functionAppUrl": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.defaultHostName.value]"
+          },
+          "functionKey": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.hostKey.value]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
+          },
+          "appInsightsId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.id.value]"
+          },
+          "appInsightsInstrumentationKey": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.instrumentationKey.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "11646830939016219520"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the API Management instance."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy API Management."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources."
+              }
+            },
+            "functionAppUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "The URL of the Function App backend."
+              }
+            },
+            "functionKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "The host key of the Function App, used by APIM to authenticate to the backend."
+              }
+            },
+            "publisherEmail": {
+              "type": "string",
+              "metadata": {
+                "description": "The publisher email address for the APIM instance."
+              }
+            },
+            "publisherName": {
+              "type": "string",
+              "metadata": {
+                "description": "The publisher name for the APIM instance."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Application Insights instance."
+              }
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "The instrumentation key of the Application Insights instance."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ApiManagement/service",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Consumption",
+                "capacity": 0
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "publisherEmail": "[parameters('publisherEmail')]",
+                "publisherName": "[parameters('publisherName')]"
+              }
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/namedValues",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'function-app-host-key')]",
+              "properties": {
+                "displayName": "function-app-host-key",
+                "value": "[parameters('functionKey')]",
+                "secret": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/backends",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'standup-api-backend')]",
+              "properties": {
+                "description": "Standup API Function App backend",
+                "url": "[format('https://{0}/api', parameters('functionAppUrl'))]",
+                "protocol": "http",
+                "credentials": {
+                  "header": {
+                    "x-functions-key": [
+                      "{{function-app-host-key}}"
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]",
+                "[resourceId('Microsoft.ApiManagement/service/namedValues', parameters('name'), 'function-app-host-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'standup-api')]",
+              "properties": {
+                "displayName": "Standup API",
+                "description": "API for the Naked Standup platform",
+                "path": "standup",
+                "protocols": [
+                  "https"
+                ],
+                "subscriptionRequired": true,
+                "subscriptionKeyParameterNames": {
+                  "header": "X-Api-Key"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis/operations",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'standup-api', 'create-video')]",
+              "properties": {
+                "displayName": "Create Video",
+                "description": "Request a SAS URL for uploading a status video to Azure Blob Storage.",
+                "method": "POST",
+                "urlTemplate": "/video",
+                "request": {
+                  "representations": [
+                    {
+                      "contentType": "application/json"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "statusCode": 200,
+                    "description": "SAS URL generated successfully"
+                  },
+                  {
+                    "statusCode": 400,
+                    "description": "Bad request"
+                  },
+                  {
+                    "statusCode": 401,
+                    "description": "Unauthorized"
+                  },
+                  {
+                    "statusCode": 415,
+                    "description": "Unsupported media type"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/apis', parameters('name'), 'standup-api')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis/policies",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'standup-api', 'policy')]",
+              "properties": {
+                "format": "xml",
+                "value": "<policies>\n  <inbound>\n    <base />\n    <set-backend-service backend-id=\"standup-api-backend\" />\n  </inbound>\n  <backend>\n    <base />\n  </backend>\n  <outbound>\n    <base />\n  </outbound>\n  <on-error>\n    <base />\n  </on-error>\n</policies>\n"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/backends', parameters('name'), 'standup-api-backend')]",
+                "[resourceId('Microsoft.ApiManagement/service/namedValues', parameters('name'), 'function-app-host-key')]",
+                "[resourceId('Microsoft.ApiManagement/service/apis', parameters('name'), 'standup-api')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/subscriptions",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'standup-ios-client')]",
+              "properties": {
+                "displayName": "Standup iOS Client",
+                "scope": "[resourceId('Microsoft.ApiManagement/service/apis', parameters('name'), 'standup-api')]",
+                "state": "active"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]",
+                "[resourceId('Microsoft.ApiManagement/service/apis', parameters('name'), 'standup-api')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/loggers",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'applicationinsights-logger')]",
+              "properties": {
+                "loggerType": "applicationInsights",
+                "description": "Application Insights logger",
+                "credentials": {
+                  "instrumentationKey": "[parameters('appInsightsInstrumentationKey')]"
+                },
+                "isBuffered": true,
+                "resourceId": "[parameters('appInsightsId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/diagnostics",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'applicationinsights')]",
+              "properties": {
+                "alwaysLog": "allErrors",
+                "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', parameters('name'), 'applicationinsights-logger')]",
+                "logClientIp": true,
+                "sampling": {
+                  "samplingType": "fixed",
+                  "percentage": 100
+                },
+                "frontend": {
+                  "request": {
+                    "headers": [],
+                    "body": {
+                      "bytes": 0
+                    }
+                  },
+                  "response": {
+                    "headers": [],
+                    "body": {
+                      "bytes": 0
+                    }
+                  }
+                },
+                "backend": {
+                  "request": {
+                    "headers": [],
+                    "body": {
+                      "bytes": 0
+                    }
+                  },
+                  "response": {
+                    "headers": [],
+                    "body": {
+                      "bytes": 0
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]",
+                "[resourceId('Microsoft.ApiManagement/service/loggers', parameters('name'), 'applicationinsights-logger')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the API Management instance."
+              },
+              "value": "[resourceId('Microsoft.ApiManagement/service', parameters('name'))]"
+            },
+            "gatewayUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "The gateway URL for the API Management instance."
+              },
+              "value": "[reference(resourceId('Microsoft.ApiManagement/service', parameters('name')), '2023-09-01-preview').gatewayUrl]"
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the APIM managed identity."
+              },
+              "value": "[reference(resourceId('Microsoft.ApiManagement/service', parameters('name')), '2023-09-01-preview', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "AZURE_STORAGE_ACCOUNT_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the deployed storage account."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.name.value]"
+    },
+    "AZURE_STORAGE_BLOB_ENDPOINT": {
+      "type": "string",
+      "metadata": {
+        "description": "The primary blob endpoint of the storage account."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.primaryBlobEndpoint.value]"
+    },
+    "AZURE_STORAGE_ACCOUNT_ID": {
+      "type": "string",
+      "metadata": {
+        "description": "The resource ID of the storage account."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.id.value]"
+    },
+    "AZURE_FUNCTION_APP_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the deployed Function App."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.name.value]"
+    },
+    "AZURE_FUNCTION_APP_HOSTNAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The default hostname of the Function App."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.defaultHostName.value]"
+    },
+    "AZURE_APIM_GATEWAY_URL": {
+      "type": "string",
+      "metadata": {
+        "description": "The gateway URL of the API Management instance."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'api-management'), '2022-09-01').outputs.gatewayUrl.value]"
+    },
+    "AZURE_KEY_VAULT_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Key Vault."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'key-vault'), '2022-09-01').outputs.name.value]"
+    },
+    "AZURE_KEY_VAULT_URI": {
+      "type": "string",
+      "metadata": {
+        "description": "The URI of the Key Vault."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'key-vault'), '2022-09-01').outputs.vaultUri.value]"
+    },
+    "AZURE_RESOURCE_GROUP": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the resource group."
+      },
+      "value": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]"
+    },
+    "AZURE_APPLICATION_INSIGHTS_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Application Insights instance."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.name.value]"
+    },
+    "AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING": {
+      "type": "string",
+      "metadata": {
+        "description": "The connection string of the Application Insights instance."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.connectionString.value]"
+    },
+    "AZURE_LOG_ANALYTICS_WORKSPACE_NAME": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Log Analytics Workspace."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.logAnalyticsWorkspaceName.value]"
+    }
+  }
+}
