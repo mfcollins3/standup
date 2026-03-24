@@ -58,6 +58,7 @@ resource blobCreatedSubscription 'Microsoft.EventGrid/systemTopics/eventSubscrip
 			properties: {
 				resourceId: storageAccountId
 				blobContainerName: 'status-videos'
+				blobPrefix: 'deadletter/'
 			}
 		}
 		retryPolicy: {
