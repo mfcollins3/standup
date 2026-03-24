@@ -217,8 +217,8 @@ Cloudflare Stream ── transcodes ──▶ HLS/DASH playback URLs
 
 ### Azure Key Vault
 
-- **`CloudflareStreamApiToken`**: Cloudflare API token with "Stream Write" permission
-- **`CloudflareStreamAccountId`**: Cloudflare account identifier
+- **`CloudflareApiToken`** (previously documented as `CloudflareStreamApiToken`): Cloudflare API token with "Stream Write" permission
+- **`CloudflareAccountId`** (previously documented as `CloudflareStreamAccountId`): Cloudflare account identifier
 
 Both secrets are referenced by the Function App via Key Vault references in app settings.
 
