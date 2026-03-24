@@ -43,4 +43,37 @@ public sealed class SasUrlService(BlobServiceClient blobServiceClient) : ISasUrl
 
         return new SasUrlResult(blobUriBuilder.ToUri(), expiresOn);
     }
+
+    public async Task<SasUrlResult> GenerateReadSasUrlAsync(
+        string blobPath,
+        CancellationToken cancellationToken = default)
+    {
+        var startsOn = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var expiresOn = DateTimeOffset.UtcNow.AddMinutes(60);
+
+        var userDelegationKey = await blobServiceClient.GetUserDelegationKeyAsync(
+            startsOn,
+            expiresOn,
+            cancellationToken);
+
+        var sasBuilder = new BlobSasBuilder
+        {
+            BlobContainerName = ContainerName,
+            BlobName = blobPath,
+            Resource = "b",
+            StartsOn = startsOn,
+            ExpiresOn = expiresOn,
+            Protocol = SasProtocol.Https
+        };
+        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+        var blobUriBuilder = new BlobUriBuilder(blobServiceClient.Uri)
+        {
+            BlobContainerName = ContainerName,
+            BlobName = blobPath,
+            Sas = sasBuilder.ToSasQueryParameters(userDelegationKey, blobServiceClient.AccountName)
+        };
+
+        return new SasUrlResult(blobUriBuilder.ToUri(), expiresOn);
+    }
 }

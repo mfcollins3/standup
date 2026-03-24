@@ -14,7 +14,7 @@
 
 > Add the Event Grid trigger extension package to the Azure Functions project.
 
-- [ ] T001 Add EventGrid trigger package to `api/Api.csproj`
+- [x] T001 Add EventGrid trigger package to `api/Api.csproj`
 
 ### T001 Details
 
@@ -32,11 +32,11 @@ See R-001 in research.md for package selection rationale.
 > operate: Event Grid event delivery, Cloudflare credential storage, and
 > application configuration. All user stories depend on this phase.
 
-- [ ] T002 [P] Create Event Grid Bicep module in `infra/modules/event-grid.bicep`
-- [ ] T003 [P] Modify Key Vault module to add Cloudflare secrets in `infra/modules/key-vault.bicep`
-- [ ] T004 [P] Modify Function App module to add Cloudflare app settings in `infra/modules/function-app.bicep`
-- [ ] T005 [P] Remove commented-out Event Grid resources from `infra/modules/storage.bicep`
-- [ ] T006 Wire Event Grid module and enableEventGrid parameter in `infra/main.bicep`
+- [x] T002 [P] Create Event Grid Bicep module in `infra/modules/event-grid.bicep`
+- [x] T003 [P] Modify Key Vault module to add Cloudflare secrets in `infra/modules/key-vault.bicep`
+- [x] T004 [P] Modify Function App module to add Cloudflare app settings in `infra/modules/function-app.bicep`
+- [x] T005 [P] Remove commented-out Event Grid resources from `infra/modules/storage.bicep`
+- [x] T006 Wire Event Grid module and enableEventGrid parameter in `infra/main.bicep`
 
 ### T002 Details
 
@@ -149,7 +149,7 @@ environments.
 
 ### Implementation for US-4
 
-- [ ] T007 [US4] Execute two-pass bootstrap deployment for Event Grid infrastructure
+- [x] T007 [US4] Execute two-pass bootstrap deployment for Event Grid infrastructure
 
 ### T007 Details
 
@@ -211,18 +211,18 @@ video UID and begins processing.
 > to allow compilation, then write test cases. Tests should FAIL until
 > ProcessVideo is implemented in T015.**
 
-- [ ] T008 [US1] Write unit tests for ProcessVideo function in `api/Api.Tests/Functions/ProcessVideoTests.cs`
+- [x] T008 [US1] Write unit tests for ProcessVideo function in `api/Api.Tests/Functions/ProcessVideoTests.cs`
 
 ### Implementation for US-1
 
-- [ ] T009 [P] [US1] Create CloudflareStreamRequest model in `api/Models/CloudflareStreamRequest.cs`
-- [ ] T010 [P] [US1] Create CloudflareStreamResponse models in `api/Models/CloudflareStreamResponse.cs`
-- [ ] T011 [P] [US1] Extend ISasUrlService with read SAS method in `api/Services/ISasUrlService.cs`
-- [ ] T012 [US1] Create ICloudflareStreamService interface in `api/Services/ICloudflareStreamService.cs`
-- [ ] T013 [P] [US1] Implement read SAS URL generation in `api/Services/SasUrlService.cs`
-- [ ] T014 [US1] Implement CloudflareStreamService in `api/Services/CloudflareStreamService.cs`
-- [ ] T015 [US1] Create ProcessVideo Event Grid trigger function in `api/Functions/ProcessVideo.cs`
-- [ ] T016 [US1] Register services and configure HttpClient in `api/Program.cs`
+- [x] T009 [P] [US1] Create CloudflareStreamRequest model in `api/Models/CloudflareStreamRequest.cs`
+- [x] T010 [P] [US1] Create CloudflareStreamResponse models in `api/Models/CloudflareStreamResponse.cs`
+- [x] T011 [P] [US1] Extend ISasUrlService with read SAS method in `api/Services/ISasUrlService.cs`
+- [x] T012 [US1] Create ICloudflareStreamService interface in `api/Services/ICloudflareStreamService.cs`
+- [x] T013 [P] [US1] Implement read SAS URL generation in `api/Services/SasUrlService.cs`
+- [x] T014 [US1] Implement CloudflareStreamService in `api/Services/CloudflareStreamService.cs`
+- [x] T015 [US1] Create ProcessVideo Event Grid trigger function in `api/Functions/ProcessVideo.cs`
+- [x] T016 [US1] Register services and configure HttpClient in `api/Program.cs`
 
 ### T008 Details
 
@@ -453,11 +453,11 @@ dead-letter delivery after max retries.
 
 ### Tests for US-2 ⚠️
 
-- [ ] T017 [US2] Write failure and retry behavior tests in `api/Api.Tests/Functions/ProcessVideoTests.cs`
+- [x] T017 [US2] Write failure and retry behavior tests in `api/Api.Tests/Functions/ProcessVideoTests.cs`
 
 ### Implementation for US-2
 
-- [ ] T018 [US2] Implement error classification in `api/Functions/ProcessVideo.cs`
+- [x] T018 [US2] Implement error classification in `api/Functions/ProcessVideo.cs`
 
 ### T017 Details
 
@@ -527,8 +527,8 @@ video UID and are queryable in Application Insights.
 
 ### Implementation for US-3
 
-- [ ] T019 [US3] Implement structured logging for processing status in `api/Functions/ProcessVideo.cs`
-- [ ] T020 [US3] Record Cloudflare video UID on successful submission in `api/Functions/ProcessVideo.cs`
+- [x] T019 [US3] Implement structured logging for processing status in `api/Functions/ProcessVideo.cs`
+- [x] T020 [US3] Record Cloudflare video UID on successful submission in `api/Functions/ProcessVideo.cs`
 
 ### T019 Details
 
@@ -581,9 +581,9 @@ structured data. Video UIDs are recorded and queryable.
 
 > Final validation, documentation, and cleanup.
 
-- [ ] T021 [P] Run quickstart.md local validation (build, curl test, dotnet test)
-- [ ] T022 [P] Verify all 16 functional requirements are addressed
-- [ ] T023 Update local.settings.json with Cloudflare development credentials in `api/local.settings.json`
+- [x] T021 [P] Run quickstart.md local validation (build, curl test, dotnet test)
+- [x] T022 [P] Verify all 16 functional requirements are addressed
+- [x] T023 Update local.settings.json with Cloudflare development credentials in `api/local.settings.json`
 
 ### T021 Details
 

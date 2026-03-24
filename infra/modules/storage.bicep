@@ -41,40 +41,6 @@ resource statusVideosContainer 'Microsoft.Storage/storageAccounts/blobServices/c
 	}
 }
 
-// resource eventGridSystemTopic 'Microsoft.EventGrid/systemTopics@2022-06-15' = {
-// 	name: '${name}-evgt'
-// 	location: location
-// 	tags: tags
-// 	properties: {
-// 		source: storageAccount.id
-// 		topicType: 'Microsoft.Storage.StorageAccounts'
-// 	}
-// }
-
-// resource blobCreatedSubscription 'Microsoft.EventGrid/systemTopics/eventSubscriptions@2022-06-15' = {
-// 	parent: eventGridSystemTopic
-// 	name: '${name}-evgs'
-// 	properties: {
-// 		filter: {
-// 			subjectBeginsWith: '/blobServices/default/containers/status-videos/blobs/uploads/'
-// 			includedEventTypes: [
-// 				'Microsoft.Storage.BlobCreated'
-// 			]
-// 		}
-// 		destination: {
-// 			endpointType: 'WebHook'
-// 			properties: {
-// 				// Placeholder webhook URL — replace with actual processing function endpoint
-// 				endpointUrl: 'https://placeholder.example.com/api/process-video'
-// 			}
-// 		}
-// 		retryPolicy: {
-// 			maxDeliveryAttempts: 3
-// 			eventTimeToLiveInMinutes: 30
-// 		}
-// 	}
-// }
-
 @description('The resource ID of the storage account.')
 output id string = storageAccount.id
 

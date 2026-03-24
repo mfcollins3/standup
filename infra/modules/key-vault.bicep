@@ -20,6 +20,13 @@ param apimPrincipalId string
 @description('The resource ID of the Log Analytics Workspace for diagnostic settings.')
 param logAnalyticsWorkspaceId string
 
+@description('The Cloudflare API token for authenticating with Cloudflare Stream.')
+@secure()
+param cloudflareApiToken string
+
+@description('The Cloudflare account ID used to identify the account when calling Cloudflare APIs.')
+param cloudflareAccountId string
+
 // Key Vault Secrets Officer role — allows the Function App to set the host key secret
 var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
@@ -90,3 +97,19 @@ output name string = keyVault.name
 
 @description('The URI of the Key Vault.')
 output vaultUri string = keyVault.properties.vaultUri
+
+resource cloudflareApiTokenSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+	parent: keyVault
+	name: 'CloudflareApiToken'
+	properties: {
+		value: cloudflareApiToken
+	}
+}
+
+resource cloudflareAccountIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+	parent: keyVault
+	name: 'CloudflareAccountId'
+	properties: {
+		value: cloudflareAccountId
+	}
+}

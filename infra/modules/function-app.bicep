@@ -26,6 +26,9 @@ param storageAccountBlobEndpoint string
 @description('The connection string for the Application Insights instance.')
 param appInsightsConnectionString string
 
+@description('The name of the Key Vault containing Cloudflare credentials.')
+param keyVaultName string
+
 // Storage Blob Delegator role — allows GetUserDelegationKey
 var storageBlobDelegatorRoleId = 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a'
 
@@ -96,6 +99,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 				{
 					name: 'AZURE_STORAGE_BLOB_ENDPOINT'
 					value: storageAccountBlobEndpoint
+				}
+				{
+					name: 'CLOUDFLARE_ACCOUNT_ID'
+					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareAccountId)'
+				}
+				{
+					name: 'CLOUDFLARE_API_TOKEN'
+					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareApiToken)'
 				}
 			]
 		}
