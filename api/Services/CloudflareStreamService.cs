@@ -33,7 +33,7 @@ public sealed class CloudflareStreamService(
         httpRequest.Headers.Add("Authorization", $"Bearer {_apiToken}");
         httpRequest.Content = JsonContent.Create(request);
 
-        var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.TooManyRequests ||
             (int)response.StatusCode >= 500)
@@ -55,8 +55,11 @@ public sealed class CloudflareStreamService(
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<CloudflareStreamResponse>(
-            cancellationToken: cancellationToken);
-        return result!;
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException(
+                "Cloudflare Stream returned a success response but the response body could not be deserialized.");
+
+        return result;
     }
 }
 
