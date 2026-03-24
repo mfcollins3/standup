@@ -108,6 +108,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 					name: 'CLOUDFLARE_API_TOKEN'
 					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareApiToken)'
 				}
+				{
+					name: 'CLOUDFLARE_WEBHOOK_SIGNING_SECRET'
+					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareWebhookSigningSecret)'
+				}
 			]
 		}
 		functionAppConfig: {

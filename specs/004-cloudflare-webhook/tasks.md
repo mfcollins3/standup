@@ -16,7 +16,7 @@
 > packages are required — all cryptographic primitives are in the .NET
 > BCL (`System.Security.Cryptography`).
 
-- [ ] T001 Verify existing project builds and tests pass in `api/`
+- [x] T001 Verify existing project builds and tests pass in `api/`
 
 ### T001 Details
 
@@ -41,8 +41,8 @@ implement the webhook feature.
 > before the webhook function can verify signatures in deployed
 > environments.
 
-- [ ] T002 [P] Add webhook signing secret to Key Vault in `infra/modules/key-vault.bicep`
-- [ ] T003 [P] Add webhook signing secret app setting to Function App in `infra/modules/function-app.bicep`
+- [x] T002 [P] Add webhook signing secret to Key Vault in `infra/modules/key-vault.bicep`
+- [x] T003 [P] Add webhook signing secret app setting to Function App in `infra/modules/function-app.bicep`
 
 ### T002 Details
 
@@ -102,12 +102,12 @@ configuration throws `InvalidOperationException`.
 
 ### Tests for US-2
 
-- [ ] T004 [US2] Write signature verification tests in `api/Api.Tests/Services/WebhookSignatureServiceTests.cs`
+- [x] T004 [US2] Write signature verification tests in `api/Api.Tests/Services/WebhookSignatureServiceTests.cs`
 
 ### Implementation for US-2
 
-- [ ] T005 [US2] Create signature verification interface in `api/Services/IWebhookSignatureService.cs`
-- [ ] T006 [US2] Implement signature verification service in `api/Services/WebhookSignatureService.cs`
+- [x] T005 [US2] Create signature verification interface in `api/Services/IWebhookSignatureService.cs`
+- [x] T006 [US2] Implement signature verification service in `api/Services/WebhookSignatureService.cs`
 
 ### T004 Details
 
@@ -245,13 +245,13 @@ processing status. Send unsigned or tampered requests and verify HTTP
 
 ### Tests for US-1
 
-- [ ] T007 [US1] Write webhook function tests in `api/Api.Tests/Functions/CloudflareWebhookTests.cs`
+- [x] T007 [US1] Write webhook function tests in `api/Api.Tests/Functions/CloudflareWebhookTests.cs`
 
 ### Implementation for US-1
 
-- [ ] T008 [P] [US1] Create webhook payload model in `api/Models/CloudflareWebhookPayload.cs`
-- [ ] T009 [US1] Implement webhook function in `api/Functions/CloudflareWebhook.cs`
-- [ ] T010 [US1] Register WebhookSignatureService in `api/Program.cs`
+- [x] T008 [P] [US1] Create webhook payload model in `api/Models/CloudflareWebhookPayload.cs`
+- [x] T009 [US1] Implement webhook function in `api/Functions/CloudflareWebhook.cs`
+- [x] T010 [US1] Register WebhookSignatureService in `api/Program.cs`
 
 ### T007 Details
 
@@ -456,8 +456,8 @@ tests pass.
 
 > Final validation, documentation, and cleanup.
 
-- [ ] T011 [P] Run quickstart.md local validation (build, curl tests, unit tests)
-- [ ] T012 [P] Verify all functional requirements are addressed
+- [x] T011 [P] Run quickstart.md local validation (build, curl tests, unit tests)
+- [x] T012 [P] Verify all functional requirements are addressed
 
 ### T011 Details
 
