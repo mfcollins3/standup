@@ -124,7 +124,7 @@ curl -X POST "http://localhost:7071/api/webhooks/cloudflare/stream" \
   -d '{"uid": "test", "readyToStream": true}'
 ```
 
-**Expected result**: HTTP 401 Unauthorized with body `{ "error": "Missing webhook signature" }`.
+**Expected result**: HTTP 401 Unauthorized with body `{ "error": { "code": "unauthorized", "message": "Request signature is missing or invalid." } }`.
 
 ## 6. Test Validation — Invalid Signature
 
@@ -135,7 +135,7 @@ curl -X POST "http://localhost:7071/api/webhooks/cloudflare/stream" \
   -d '{"uid": "test", "readyToStream": true}'
 ```
 
-**Expected result**: HTTP 401 Unauthorized with body `{ "error": "Invalid webhook signature" }`.
+**Expected result**: HTTP 401 Unauthorized with body `{ "error": { "code": "unauthorized", "message": "Request signature is missing or invalid." } }`.
 
 ## 7. Test Validation — Empty Body
 
@@ -145,7 +145,7 @@ curl -X POST "http://localhost:7071/api/webhooks/cloudflare/stream" \
   -H "Webhook-Signature: time=1230811200,sig1=abc123"
 ```
 
-**Expected result**: HTTP 400 Bad Request with body `{ "error": "Request body is required" }`.
+**Expected result**: HTTP 400 Bad Request with body `{ "error": { "code": "bad_request", "message": "Request body is required." } }`.
 
 ## 8. Run Unit Tests
 
@@ -170,7 +170,7 @@ curl -X PUT "https://api.cloudflare.com/client/v4/accounts/{account_id}/stream/w
   -d '{"notificationUrl": "https://{functionApp}.azurewebsites.net/api/webhooks/cloudflare/stream"}'
 ```
 
-The response includes the `secret` field — store this value in Azure Key Vault as the `CLOUDFLARE_WEBHOOK_SIGNING_SECRET` secret.
+The response includes the `secret` field — store this value in Azure Key Vault as the `CloudflareWebhookSigningSecret` secret.
 
 ## 10. Verify End-to-End in Azure
 

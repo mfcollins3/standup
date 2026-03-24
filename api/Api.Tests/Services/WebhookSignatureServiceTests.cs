@@ -137,4 +137,61 @@ public sealed class WebhookSignatureServiceTests
         Assert.Throws<InvalidOperationException>(
             () => new WebhookSignatureService(config));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_EmptyOrWhitespaceSigningSecret_ThrowsInvalidOperationException(
+        string secret)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CLOUDFLARE_WEBHOOK_SIGNING_SECRET"] = secret
+            })
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () => new WebhookSignatureService(config));
+    }
+
+    [Fact]
+    public void VerifySignature_UppercaseHexSignature_ReturnsTrue()
+    {
+        var service = CreateService();
+        const string timestamp = "1230811200";
+        const string body = """{"uid":"abc123","readyToStream":true}""";
+        var sig = ComputeSignature(TestSecret, timestamp, body).ToUpperInvariant();
+        var header = $"time={timestamp},sig1={sig}";
+
+        var result = service.VerifySignature(header, body);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void VerifySignature_NonHexSignature_ReturnsFalse()
+    {
+        var service = CreateService();
+        const string timestamp = "1230811200";
+        const string body = """{"uid":"abc123","readyToStream":true}""";
+        var header = $"time={timestamp},sig1=not-valid-hex!!";
+
+        var result = service.VerifySignature(header, body);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void VerifySignature_WrongLengthHexSignature_ReturnsFalse()
+    {
+        var service = CreateService();
+        const string timestamp = "1230811200";
+        const string body = """{"uid":"abc123","readyToStream":true}""";
+        var header = $"time={timestamp},sig1=deadbeef";
+
+        var result = service.VerifySignature(header, body);
+
+        Assert.False(result);
+    }
 }

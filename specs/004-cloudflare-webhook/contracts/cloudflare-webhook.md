@@ -103,11 +103,11 @@ Sent when transcoding fails (`readyToStream: false`, `status.state: "error"`).
 | Scenario | Status Code | Body | Description |
 |----------|-------------|------|-------------|
 | Valid signature, body parsed | `200 OK` | Empty | Acknowledged; Cloudflare will not retry |
-| Missing `Webhook-Signature` header | `401 Unauthorized` | `{ "error": { "code": "MISSING_SIGNATURE", "message": "Missing webhook signature" } }` | Rejected |
-| Invalid signature (HMAC mismatch) | `401 Unauthorized` | `{ "error": { "code": "INVALID_SIGNATURE", "message": "Invalid webhook signature" } }` | Rejected |
+| Missing `Webhook-Signature` header | `401 Unauthorized` | `{ "error": { "code": "unauthorized", "message": "Request signature is missing or invalid." } }` | Rejected |
+| Invalid signature (HMAC mismatch) | `401 Unauthorized` | `{ "error": { "code": "unauthorized", "message": "Request signature is missing or invalid." } }` | Rejected |
 | Signing secret not configured | N/A | N/A | Unreachable at runtime — `WebhookSignatureService` constructor throws `InvalidOperationException` (fail-closed per FR-011), preventing the Function App from starting |
-| Empty or null request body | `400 Bad Request` | `{ "error": { "code": "EMPTY_BODY", "message": "Request body is required" } }` | Rejected |
-| Malformed JSON body | `400 Bad Request` | `{ "error": { "code": "INVALID_BODY", "message": "Invalid request body" } }` | Rejected |
+| Empty or null request body | `400 Bad Request` | `{ "error": { "code": "bad_request", "message": "Request body is required." } }` | Rejected |
+| Malformed JSON body | `400 Bad Request` | `{ "error": { "code": "bad_request", "message": "Invalid JSON payload." } }` | Rejected |
 
 ---
 
