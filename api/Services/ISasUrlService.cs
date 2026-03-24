@@ -11,4 +11,8 @@ public interface ISasUrlService
     Task<SasUrlResult> GenerateSasUrlAsync(
         string blobPath,
         CancellationToken cancellationToken = default);
+
+    Task<SasUrlResult> GenerateReadSasUrlAsync(
+        string blobPath,
+        CancellationToken cancellationToken = default);
 }

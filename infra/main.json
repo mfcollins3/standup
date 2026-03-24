@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.23.1.45101",
-      "templateHash": "8560613244539196472"
+      "templateHash": "4263014713806253971"
     }
   },
   "parameters": {
@@ -36,6 +36,25 @@
       "defaultValue": "Naked Standup",
       "metadata": {
         "description": "The publisher name for the API Management instance."
+      }
+    },
+    "enableEventGrid": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Whether to enable Event Grid subscription for blob-created events. Set to false on first provision, true after the Function App is deployed."
+      }
+    },
+    "cloudflareApiToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The Cloudflare API token used to authenticate requests to the Cloudflare Stream API."
+      }
+    },
+    "cloudflareAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "The Cloudflare account ID used to identify the account when submitting videos to Cloudflare Stream."
       }
     }
   },
@@ -361,6 +380,9 @@
           },
           "appInsightsConnectionString": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.connectionString.value]"
+          },
+          "keyVaultName": {
+            "value": "[format('{0}-standup-{1}', variables('abbrs').keyVault, variables('resourceToken'))]"
           }
         },
         "template": {
@@ -370,7 +392,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "11839856004085231617"
+              "templateHash": "5705499692470354204"
             }
           },
           "parameters": {
@@ -421,6 +443,12 @@
               "type": "string",
               "metadata": {
                 "description": "The connection string for the Application Insights instance."
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Key Vault containing Cloudflare credentials."
               }
             }
           },
@@ -483,6 +511,14 @@
                     {
                       "name": "AZURE_STORAGE_BLOB_ENDPOINT",
                       "value": "[parameters('storageAccountBlobEndpoint')]"
+                    },
+                    {
+                      "name": "CLOUDFLARE_ACCOUNT_ID",
+                      "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=CloudflareAccountId)', parameters('keyVaultName'))]"
+                    },
+                    {
+                      "name": "CLOUDFLARE_API_TOKEN",
+                      "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=CloudflareApiToken)', parameters('keyVaultName'))]"
                     }
                   ]
                 },
@@ -624,6 +660,12 @@
           },
           "logAnalyticsWorkspaceId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring'), '2022-09-01').outputs.logAnalyticsWorkspaceId.value]"
+          },
+          "cloudflareApiToken": {
+            "value": "[parameters('cloudflareApiToken')]"
+          },
+          "cloudflareAccountId": {
+            "value": "[parameters('cloudflareAccountId')]"
           }
         },
         "template": {
@@ -633,7 +675,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.23.1.45101",
-              "templateHash": "6271026621046257363"
+              "templateHash": "4453945994355688786"
             }
           },
           "parameters": {
@@ -672,6 +714,18 @@
               "type": "string",
               "metadata": {
                 "description": "The resource ID of the Log Analytics Workspace for diagnostic settings."
+              }
+            },
+            "cloudflareApiToken": {
+              "type": "securestring",
+              "metadata": {
+                "description": "The Cloudflare API token for authenticating with Cloudflare Stream."
+              }
+            },
+            "cloudflareAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "The Cloudflare account ID used to identify the account when calling Cloudflare APIs."
               }
             }
           },
@@ -748,6 +802,28 @@
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
               ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'CloudflareApiToken')]",
+              "properties": {
+                "value": "[parameters('cloudflareApiToken')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'CloudflareAccountId')]",
+              "properties": {
+                "value": "[parameters('cloudflareAccountId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
             }
           ],
           "outputs": {
@@ -780,6 +856,151 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'monitoring')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "event-grid",
+      "resourceGroup": "[format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.name.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage'), '2022-09-01').outputs.id.value]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "functionAppHostName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.defaultHostName.value]"
+          },
+          "functionAppId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app'), '2022-09-01').outputs.id.value]"
+          },
+          "enableEventGrid": {
+            "value": "[parameters('enableEventGrid')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.23.1.45101",
+              "templateHash": "15840280129511147044"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the storage account used as the Event Grid source."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the storage account used as the Event Grid source."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region in which to deploy Event Grid resources."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to Event Grid resources."
+              }
+            },
+            "functionAppHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "The default hostname of the Function App webhook target."
+              }
+            },
+            "functionAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "The resource ID of the Function App."
+              }
+            },
+            "enableEventGrid": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Whether to deploy Event Grid resources. Set to false for initial deployment, true after the Function App is running."
+              }
+            }
+          },
+          "resources": [
+            {
+              "condition": "[parameters('enableEventGrid')]",
+              "type": "Microsoft.EventGrid/systemTopics",
+              "apiVersion": "2022-06-15",
+              "name": "[format('{0}-evgt', parameters('storageAccountName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "source": "[parameters('storageAccountId')]",
+                "topicType": "Microsoft.Storage.StorageAccounts"
+              }
+            },
+            {
+              "condition": "[parameters('enableEventGrid')]",
+              "type": "Microsoft.EventGrid/systemTopics/eventSubscriptions",
+              "apiVersion": "2022-06-15",
+              "name": "[format('{0}/{1}', format('{0}-evgt', parameters('storageAccountName')), format('{0}-evgs', parameters('storageAccountName')))]",
+              "properties": {
+                "filter": {
+                  "subjectBeginsWith": "/blobServices/default/containers/status-videos/blobs/uploads/",
+                  "includedEventTypes": [
+                    "Microsoft.Storage.BlobCreated"
+                  ]
+                },
+                "destination": {
+                  "endpointType": "WebHook",
+                  "properties": {
+                    "endpointUrl": "[format('https://{0}/runtime/webhooks/eventgrid?functionName=ProcessVideo&code={1}', parameters('functionAppHostName'), if(parameters('enableEventGrid'), listKeys(format('{0}/host/default', parameters('functionAppId')), '2024-04-01').systemKeys.eventgrid_extension, ''))]"
+                  }
+                },
+                "deadLetterDestination": {
+                  "endpointType": "StorageBlob",
+                  "properties": {
+                    "resourceId": "[parameters('storageAccountId')]",
+                    "blobContainerName": "status-videos"
+                  }
+                },
+                "retryPolicy": {
+                  "maxDeliveryAttempts": 30,
+                  "eventTimeToLiveInMinutes": 1440
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventGrid/systemTopics', format('{0}-evgt', parameters('storageAccountName')))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'function-app')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}-standup-{1}', variables('abbrs').resourceGroup, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'storage')]"
       ]
     },
     {

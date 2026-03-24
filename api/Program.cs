@@ -22,6 +22,10 @@ var host = new HostBuilder()
             return new BlobServiceClient(new Uri(blobEndpoint), new DefaultAzureCredential());
         });
         services.AddSingleton<ISasUrlService, SasUrlService>();
+        services.AddHttpClient<ICloudflareStreamService, CloudflareStreamService>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
+        });
     })
     .Build();
 

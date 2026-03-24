@@ -19,6 +19,16 @@ param publisherEmail string = 'support@nakedstandup.app'
 @description('The publisher name for the API Management instance.')
 param publisherName string = 'Naked Standup'
 
+@description('Whether to enable Event Grid subscription for blob-created events. Set to false on first provision, true after the Function App is deployed.')
+param enableEventGrid bool = false
+
+@description('The Cloudflare API token used to authenticate requests to the Cloudflare Stream API.')
+@secure()
+param cloudflareApiToken string
+
+@description('The Cloudflare account ID used to identify the account when submitting videos to Cloudflare Stream.')
+param cloudflareAccountId string
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
@@ -65,6 +75,7 @@ module functionApp './modules/function-app.bicep' = {
 		storageAccountName: storage.outputs.name
 		storageAccountBlobEndpoint: storage.outputs.primaryBlobEndpoint
 		appInsightsConnectionString: monitoring.outputs.connectionString
+		keyVaultName: '${abbrs.keyVault}-standup-${resourceToken}'
 	}
 }
 
@@ -78,6 +89,22 @@ module keyVault './modules/key-vault.bicep' = {
 		functionAppPrincipalId: functionApp.outputs.principalId
 		apimPrincipalId: apim.outputs.principalId
 		logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
+		cloudflareApiToken: cloudflareApiToken
+		cloudflareAccountId: cloudflareAccountId
+	}
+}
+
+module eventGrid './modules/event-grid.bicep' = {
+	name: 'event-grid'
+	scope: resourceGroup
+	params: {
+		storageAccountName: storage.outputs.name
+		storageAccountId: storage.outputs.id
+		location: location
+		tags: tags
+		functionAppHostName: functionApp.outputs.defaultHostName
+		functionAppId: functionApp.outputs.id
+		enableEventGrid: enableEventGrid
 	}
 }
 
@@ -128,7 +155,6 @@ output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output AZURE_APPLICATION_INSIGHTS_NAME string = monitoring.outputs.name
 
 @description('The connection string of the Application Insights instance.')
-@secure()
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = monitoring.outputs.connectionString
 
 @description('The name of the Log Analytics Workspace.')
