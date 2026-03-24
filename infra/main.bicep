@@ -29,6 +29,10 @@ param cloudflareApiToken string
 @description('The Cloudflare account ID used to identify the account when submitting videos to Cloudflare Stream.')
 param cloudflareAccountId string
 
+@description('The Cloudflare webhook signing secret used to verify inbound webhook request authenticity.')
+@secure()
+param cloudflareWebhookSigningSecret string = ''
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
@@ -91,6 +95,7 @@ module keyVault './modules/key-vault.bicep' = {
 		logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
 		cloudflareApiToken: cloudflareApiToken
 		cloudflareAccountId: cloudflareAccountId
+		cloudflareWebhookSigningSecret: cloudflareWebhookSigningSecret
 	}
 }
 

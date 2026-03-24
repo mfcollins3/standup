@@ -27,6 +27,10 @@ param cloudflareApiToken string
 @description('The Cloudflare account ID used to identify the account when calling Cloudflare APIs.')
 param cloudflareAccountId string
 
+@description('The Cloudflare webhook signing secret used to verify inbound webhook request authenticity.')
+@secure()
+param cloudflareWebhookSigningSecret string = ''
+
 // Key Vault Secrets Officer role — allows the Function App to set the host key secret
 var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
@@ -111,5 +115,13 @@ resource cloudflareAccountIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01
 	name: 'CloudflareAccountId'
 	properties: {
 		value: cloudflareAccountId
+	}
+}
+
+resource webhookSigningSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(cloudflareWebhookSigningSecret)) {
+	parent: keyVault
+	name: 'CloudflareWebhookSigningSecret'
+	properties: {
+		value: cloudflareWebhookSigningSecret
 	}
 }
