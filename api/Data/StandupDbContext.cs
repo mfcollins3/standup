@@ -12,7 +12,7 @@ public class StandupDbContext : DbContext
     {
     }
 
-    public DbSet<Video> Videos { get; set; }
+    public DbSet<Video> Videos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
