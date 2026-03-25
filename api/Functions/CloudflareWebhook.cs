@@ -80,6 +80,9 @@ public sealed class CloudflareWebhook(
                     "Invalid JSON payload.")));
         }
 
+        var hasMetaVideoId = payload.Meta is not null
+            && payload.Meta.ContainsKey("videoId");
+
         if (payload.ReadyToStream)
         {
             logger.LogInformation(
@@ -104,6 +107,14 @@ public sealed class CloudflareWebhook(
                 video.UpdatedAt = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
+            else
+            {
+                logger.LogWarning(
+                    "No matching video found for ready-to-stream webhook. "
+                    + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                    payload.Uid,
+                    hasMetaVideoId);
+            }
         }
         else if (payload.Status?.State == "error")
         {
@@ -124,6 +135,14 @@ public sealed class CloudflareWebhook(
                 video.Status = VideoStatus.Failed;
                 video.UpdatedAt = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "No matching video found for error webhook. "
+                    + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                    payload.Uid,
+                    hasMetaVideoId);
             }
         }
 

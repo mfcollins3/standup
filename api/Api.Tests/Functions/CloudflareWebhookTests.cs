@@ -423,6 +423,105 @@ public sealed class CloudflareWebhookTests : IDisposable
         Assert.Equal("File is not a video", video.ErrorReasonText);
     }
 
+    [Fact]
+    public async Task RunAsync_ReadyWebhook_VideoNotFound_LogsWarningWithUid()
+    {
+        _mockSignatureService
+            .Setup(s => s.VerifySignature(It.IsAny<string?>(), It.IsAny<string>()))
+            .Returns(true);
+
+        const string unknownUid = "unknown-uid-ready";
+        var payload = new
+        {
+            uid = unknownUid,
+            readyToStream = true,
+            status = new { state = "ready" }
+        };
+        var request = BuildRequest(JsonSerializer.Serialize(payload), "time=1741500000,sig1=fakesig");
+
+        var result = await _function.RunAsync(request, CancellationToken.None);
+
+        Assert.IsType<OkResult>(result);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains(unknownUid)
+                    && v.ToString()!.Contains("False")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce());
+    }
+
+    [Fact]
+    public async Task RunAsync_ReadyWebhook_VideoNotFoundWithMetaVideoId_LogsWarningWithHasMetaVideoIdTrue()
+    {
+        _mockSignatureService
+            .Setup(s => s.VerifySignature(It.IsAny<string?>(), It.IsAny<string>()))
+            .Returns(true);
+
+        const string unknownUid = "unknown-uid-ready-meta";
+        var payload = new
+        {
+            uid = unknownUid,
+            readyToStream = true,
+            status = new { state = "ready" },
+            meta = new { videoId = Guid.NewGuid().ToString() }
+        };
+        var request = BuildRequest(JsonSerializer.Serialize(payload), "time=1741500000,sig1=fakesig");
+
+        var result = await _function.RunAsync(request, CancellationToken.None);
+
+        Assert.IsType<OkResult>(result);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains(unknownUid)
+                    && v.ToString()!.Contains("True")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce());
+    }
+
+    [Fact]
+    public async Task RunAsync_ErrorWebhook_VideoNotFound_LogsWarningWithUid()
+    {
+        _mockSignatureService
+            .Setup(s => s.VerifySignature(It.IsAny<string?>(), It.IsAny<string>()))
+            .Returns(true);
+
+        const string unknownUid = "unknown-uid-error";
+        var payload = new
+        {
+            uid = unknownUid,
+            readyToStream = false,
+            status = new
+            {
+                state = "error",
+                errorReasonCode = "ERR_NON_VIDEO",
+                errorReasonText = "File is not a video"
+            }
+        };
+        var request = BuildRequest(JsonSerializer.Serialize(payload), "time=1741500000,sig1=fakesig");
+
+        var result = await _function.RunAsync(request, CancellationToken.None);
+
+        Assert.IsType<OkResult>(result);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains(unknownUid)
+                    && v.ToString()!.Contains("No matching video")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce());
+    }
+
     private static object BuildReadyPayload(string uid, object? meta = null) => new
     {
         uid,
