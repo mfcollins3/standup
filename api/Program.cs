@@ -48,20 +48,48 @@ var host = new HostBuilder()
         var connectionString = $"Host={postgresqlHost};Database={postgresqlDatabase};" +
             $"Username={postgresqlUsername};Ssl Mode=Require;Trust Server Certificate=true";
 
-        var credential = new DefaultAzureCredential();
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-        dataSourceBuilder.UsePeriodicPasswordProvider(
-            async (_, ct) =>
-            {
-                var tokenRequest = new TokenRequestContext(
-                    new[] { "https://ossrdbms-aad.database.windows.net/.default" });
-                var token = await credential.GetTokenAsync(tokenRequest, ct);
-                return token.Token;
-            },
-            TimeSpan.FromMinutes(55),
-            TimeSpan.Zero);
-        var dataSource = dataSourceBuilder.Build();
+        // Determine if we are running in a local development environment.
+        var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+        var isLocalHost = postgresqlHost.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || postgresqlHost == "127.0.0.1"
+            || postgresqlHost == "::1";
+        var isLocalDev = string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase)
+            || isLocalHost;
 
+        NpgsqlDataSource dataSource;
+
+        if (isLocalDev)
+        {
+            // Local development: use standard password-based authentication.
+            var postgresqlPassword = Environment.GetEnvironmentVariable("POSTGRESQL_PASSWORD")
+                ?? throw new InvalidOperationException(
+                    "Required configuration setting 'POSTGRESQL_PASSWORD' is missing for local development. " +
+                    "Ensure this environment variable is set when connecting to a local PostgreSQL instance.");
+
+            // For local development, disable SSL by default. Adjust as needed if local PostgreSQL requires SSL.
+            var localConnectionString = $"Host={postgresqlHost};Database={postgresqlDatabase};" +
+                $"Username={postgresqlUsername};Password={postgresqlPassword};Ssl Mode=Disable";
+
+            dataSource = NpgsqlDataSource.Create(localConnectionString);
+        }
+        else
+        {
+            // Azure-hosted PostgreSQL: use Entra/managed-identity authentication with periodic token refresh.
+            var credential = new DefaultAzureCredential();
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+            dataSourceBuilder.UsePeriodicPasswordProvider(
+                async (_, ct) =>
+                {
+                    var tokenRequest = new TokenRequestContext(
+                        new[] { "https://ossrdbms-aad.database.windows.net/.default" });
+                    var token = await credential.GetTokenAsync(tokenRequest, ct);
+                    return token.Token;
+                },
+                TimeSpan.FromMinutes(55),
+                TimeSpan.Zero);
+            dataSource = dataSourceBuilder.Build();
+        }
         services.AddSingleton(dataSource);
         services.AddDbContextFactory<StandupDbContext>(options =>
             options.UseNpgsql(dataSource));
