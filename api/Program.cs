@@ -68,12 +68,10 @@ var host = new HostBuilder()
     })
     .Build();
 
-using (var scope = host.Services.CreateScope())
-{
-    var dbContextFactory = scope.ServiceProvider
-        .GetRequiredService<IDbContextFactory<StandupDbContext>>();
-    await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-    await dbContext.Database.MigrateAsync();
-}
+// Note: Database migrations are intentionally not executed at Function host startup.
+// In Azure Functions, running EF Core migrations at startup can cause race conditions
+// and increase cold-start latency when multiple instances start concurrently.
+// Apply migrations out-of-band (e.g., via CI/CD pipeline or a dedicated migration job)
+// before deploying or scaling this Function App.
 
 await host.RunAsync();
