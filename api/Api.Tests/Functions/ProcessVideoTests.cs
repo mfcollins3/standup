@@ -116,7 +116,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -130,7 +130,7 @@ public sealed class ProcessVideoTests : IDisposable
             s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -155,7 +155,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -166,7 +166,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -181,7 +181,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -196,7 +196,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -211,7 +211,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -226,7 +226,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -251,7 +251,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt1 = CreateBlobCreatedEvent(
@@ -269,7 +269,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt2);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -295,7 +295,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -331,7 +331,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -342,7 +342,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(FakeReadSasUri, It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(FakeReadSasUri, It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -367,7 +367,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
 
         var evt = CreateBlobCreatedEvent(
@@ -399,7 +399,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CloudflareStreamPermanentException("Bad request from Cloudflare"));
 
         var evt = CreateBlobCreatedEvent(
@@ -434,7 +434,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
 
         var evt = CreateBlobCreatedEvent(
@@ -466,7 +466,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Too many requests", null, System.Net.HttpStatusCode.TooManyRequests));
 
         var evt = CreateBlobCreatedEvent(
@@ -498,7 +498,7 @@ public sealed class ProcessVideoTests : IDisposable
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TaskCanceledException("Request timed out"));
 
         var evt = CreateBlobCreatedEvent(
@@ -546,7 +546,7 @@ public sealed class ProcessVideoTests : IDisposable
             .ReturnsAsync(sasResult);
 
         _mockCloudflareService
-            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CloudflareStreamPermanentException("Bad request"))
             .ReturnsAsync(CreateSuccessResponse());
 
@@ -563,7 +563,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
@@ -589,7 +589,7 @@ public sealed class ProcessVideoTests : IDisposable
             .ReturnsAsync(sasResult);
 
         _mockCloudflareService
-            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable))
             .ReturnsAsync(CreateSuccessResponse());
 
@@ -606,7 +606,7 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
@@ -634,7 +634,7 @@ public sealed class ProcessVideoTests : IDisposable
             .ReturnsAsync(sasResult);
         var cloudflareUid = "cloudflare-uid-abc123";
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse(cloudflareUid));
 
         var evt = CreateBlobCreatedEvent(
@@ -650,6 +650,43 @@ public sealed class ProcessVideoTests : IDisposable
         Assert.NotNull(video);
         Assert.Equal(VideoStatus.Processing, video.Status);
         Assert.Equal(cloudflareUid, video.CloudflareVideoUid);
+    }
+
+    [Fact]
+    public async Task RunAsync_NoMatchingVideoRecord_LogsWarningAndPassesNullVideoId()
+    {
+        // No Video seeded — blob has no matching DB record
+        var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
+        _mockSasService
+            .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sasResult);
+        _mockCloudflareService
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuccessResponse());
+
+        var evt = CreateBlobCreatedEvent(
+            "https://mystorageaccount.blob.core.windows.net/status-videos/uploads/orphan.mp4",
+            "video/mp4",
+            5_000_000);
+
+        await _function.RunAsync(evt);
+
+        _mockCloudflareService.Verify(
+            s => s.SubmitForTranscodingAsync(
+                It.IsAny<Uri>(),
+                null,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _mockLogger.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("No Video record found for blob path")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }
 

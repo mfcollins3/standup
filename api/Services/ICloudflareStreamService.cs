@@ -10,7 +10,7 @@ public interface ICloudflareStreamService
 {
     Task<CloudflareStreamResponse> SubmitForTranscodingAsync(
         Uri videoReadUrl,
-        Guid videoId,
+        Guid? videoId,
         string blobPath,
         CancellationToken cancellationToken = default);
 }
