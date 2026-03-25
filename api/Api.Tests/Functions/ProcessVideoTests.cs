@@ -4,16 +4,19 @@
 
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using Api.Data;
 using Api.Functions;
 using Api.Models;
 using Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.Functions;
 
-public sealed class ProcessVideoTests
+public sealed class ProcessVideoTests : IDisposable
 {
     private static readonly Uri FakeReadSasUri = new(
         "https://mystorageaccount.blob.core.windows.net/status-videos/uploads/test.mp4?sv=2025-01-05&se=...&sp=r&spr=https&sig=...");
@@ -21,6 +24,8 @@ public sealed class ProcessVideoTests
     private readonly Mock<ILogger<ProcessVideo>> _mockLogger;
     private readonly Mock<ISasUrlService> _mockSasService;
     private readonly Mock<ICloudflareStreamService> _mockCloudflareService;
+    private readonly SqliteConnection _connection;
+    private readonly StandupDbContext _dbContext;
     private readonly ProcessVideo _function;
 
     public ProcessVideoTests()
@@ -28,10 +33,31 @@ public sealed class ProcessVideoTests
         _mockLogger = new Mock<ILogger<ProcessVideo>>();
         _mockSasService = new Mock<ISasUrlService>();
         _mockCloudflareService = new Mock<ICloudflareStreamService>();
+
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<StandupDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+        _dbContext = new StandupDbContext(options);
+        _dbContext.Database.EnsureCreated();
+
+        var mockFactory = new Mock<IDbContextFactory<StandupDbContext>>();
+        mockFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new StandupDbContext(options));
+
         _function = new ProcessVideo(
             _mockLogger.Object,
+            mockFactory.Object,
             _mockSasService.Object,
             _mockCloudflareService.Object);
+    }
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
+        _connection.Dispose();
     }
 
     private static EventGridEvent CreateBlobCreatedEvent(
@@ -71,12 +97,26 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_ValidMp4Blob_GeneratesReadSasUrlAndSubmitsToCloudflare()
     {
+        var blobPath = "uploads/test.mp4";
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = blobPath,
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -90,19 +130,32 @@ public sealed class ProcessVideoTests
             s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
     public async Task RunAsync_ValidQuicktimeBlob_ProcessesNormally()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mov",
+            ContentType = "video/quicktime",
+            FileSizeBytes = 3_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -113,7 +166,7 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -128,7 +181,7 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -143,7 +196,7 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -158,7 +211,7 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -173,19 +226,32 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
     public async Task RunAsync_DuplicateETag_DoesNotSubmitToCloudflareSecondTime()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt1 = CreateBlobCreatedEvent(
@@ -203,7 +269,7 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt2);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -211,12 +277,25 @@ public sealed class ProcessVideoTests
     public async Task RunAsync_ValidBlob_CallsGenerateReadSasUrlWithCorrectBlobPath()
     {
         var blobPath = "uploads/test-video.mp4";
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = blobPath,
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -234,12 +313,25 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_ValidBlob_CallsSubmitForTranscodingWithSasUrl()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateSuccessResponse());
 
         var evt = CreateBlobCreatedEvent(
@@ -250,19 +342,32 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(FakeReadSasUri, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(FakeReadSasUri, It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
     public async Task RunAsync_CloudflareServiceThrows_ExceptionPropagates()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
 
         var evt = CreateBlobCreatedEvent(
@@ -276,12 +381,25 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_PermanentCloudflareFailure_DoesNotThrow()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CloudflareStreamPermanentException("Bad request from Cloudflare"));
 
         var evt = CreateBlobCreatedEvent(
@@ -298,12 +416,25 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_Cloudflare503_ExceptionPropagates()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable));
 
         var evt = CreateBlobCreatedEvent(
@@ -317,12 +448,25 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_Cloudflare429_ExceptionPropagates()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Too many requests", null, System.Net.HttpStatusCode.TooManyRequests));
 
         var evt = CreateBlobCreatedEvent(
@@ -336,12 +480,25 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_CloudflareTimeout_TaskCanceledExceptionPropagates()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
         _mockCloudflareService
-            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TaskCanceledException("Request timed out"));
 
         var evt = CreateBlobCreatedEvent(
@@ -370,13 +527,26 @@ public sealed class ProcessVideoTests
     [Fact]
     public async Task RunAsync_PermanentCloudflareFailure_AllowsRetryOfSameETag()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
 
         _mockCloudflareService
-            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new CloudflareStreamPermanentException("Bad request"))
             .ReturnsAsync(CreateSuccessResponse());
 
@@ -393,20 +563,33 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
     [Fact]
     public async Task RunAsync_TransientFailure_AllowsRetryOfSameETag()
     {
+        _dbContext.Videos.Add(new Video
+        {
+            Id = Guid.NewGuid(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
         var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
         _mockSasService
             .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(sasResult);
 
         _mockCloudflareService
-            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable))
             .ReturnsAsync(CreateSuccessResponse());
 
@@ -423,7 +606,50 @@ public sealed class ProcessVideoTests
         await _function.RunAsync(evt);
 
         _mockCloudflareService.Verify(
-            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
+
+    [Fact]
+    public async Task RunAsync_ValidBlob_UpdatesVideoStatusToProcessing()
+    {
+        var videoId = Guid.NewGuid();
+        const string blobPath = "uploads/status-video.mp4";
+        _dbContext.Videos.Add(new Video
+        {
+            Id = videoId,
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = blobPath,
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
+        _mockSasService
+            .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sasResult);
+        var cloudflareUid = "cloudflare-uid-abc123";
+        _mockCloudflareService
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSuccessResponse(cloudflareUid));
+
+        var evt = CreateBlobCreatedEvent(
+            $"https://mystorageaccount.blob.core.windows.net/status-videos/{blobPath}",
+            "video/mp4",
+            5_000_000);
+
+        await _function.RunAsync(evt);
+
+        var videoForReload = await _dbContext.Videos.FindAsync(videoId);
+        await _dbContext.Entry(videoForReload!).ReloadAsync();
+        var video = await _dbContext.Videos.FindAsync(videoId);
+        Assert.NotNull(video);
+        Assert.Equal(VideoStatus.Processing, video.Status);
+        Assert.Equal(cloudflareUid, video.CloudflareVideoUid);
+    }
 }
+

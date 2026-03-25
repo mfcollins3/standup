@@ -20,12 +20,17 @@ public sealed class CloudflareStreamService(
 
     public async Task<CloudflareStreamResponse> SubmitForTranscodingAsync(
         Uri videoReadUrl,
+        Guid videoId,
         string blobPath,
         CancellationToken cancellationToken = default)
     {
         var request = new CloudflareStreamRequest(
             Url: videoReadUrl.ToString(),
-            Meta: new Dictionary<string, string> { ["blobPath"] = blobPath });
+            Meta: new Dictionary<string, string>
+            {
+                ["videoId"] = videoId.ToString(),
+                ["blobPath"] = blobPath
+            });
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,

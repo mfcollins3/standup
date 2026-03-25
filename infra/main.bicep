@@ -40,6 +40,12 @@ var tags = {
 	'azd-env-name': environmentName
 }
 
+// Pre-computed PostgreSQL host to avoid circular dependency between
+// functionApp (needs host) and postgresql (needs functionApp principalId).
+var postgresServerName = '${abbrs.postgreSqlFlexibleServer}-standup-${resourceToken}'
+var postgresqlHost = '${postgresServerName}.postgres.database.azure.com'
+var functionAppName = '${abbrs.functionApp}-standup-${resourceToken}'
+
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2022-09-01' = {
 	name: '${abbrs.resourceGroup}-standup-${environmentName}'
 	location: location
@@ -71,7 +77,7 @@ module functionApp './modules/function-app.bicep' = {
 	name: 'function-app'
 	scope: resourceGroup
 	params: {
-		name: '${abbrs.functionApp}-standup-${resourceToken}'
+		name: functionAppName
 		planName: '${abbrs.appServicePlan}-standup-${resourceToken}'
 		location: location
 		tags: tags
@@ -80,7 +86,36 @@ module functionApp './modules/function-app.bicep' = {
 		storageAccountBlobEndpoint: storage.outputs.primaryBlobEndpoint
 		appInsightsConnectionString: monitoring.outputs.connectionString
 		keyVaultName: '${abbrs.keyVault}-standup-${resourceToken}'
+		postgresqlHost: postgresqlHost
+		postgresqlDatabase: 'standup'
+		postgresqlUsername: functionAppName
 	}
+}
+
+module postgresql './modules/postgresql.bicep' = {
+	name: 'postgresql'
+	scope: resourceGroup
+	params: {
+		name: postgresServerName
+		location: location
+		tags: tags
+	}
+}
+
+// Runs in a separate deployment after postgresql so the server is fully in a
+// "Ready" state before the Entra admin operation is attempted. On re-provision
+// the server briefly enters an "Updating" state; nesting aadAdmin inside the
+// server module caused a race condition and an AadAuthOperationCannotBePerformed
+// error. Explicit dependsOn here guarantees correct ordering.
+module postgresqlAdmin './modules/postgresql-admin.bicep' = {
+	name: 'postgresql-admin'
+	scope: resourceGroup
+	params: {
+		serverName: postgresServerName
+		functionAppPrincipalId: functionApp.outputs.principalId
+		functionAppPrincipalName: functionApp.outputs.name
+	}
+	dependsOn: [postgresql]
 }
 
 module keyVault './modules/key-vault.bicep' = {
@@ -161,6 +196,12 @@ output AZURE_APPLICATION_INSIGHTS_NAME string = monitoring.outputs.name
 
 @description('The connection string of the Application Insights instance.')
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = monitoring.outputs.connectionString
+
+@description('The fully qualified domain name of the PostgreSQL Flexible Server.')
+output AZURE_POSTGRESQL_HOST string = postgresql.outputs.fullyQualifiedDomainName
+
+@description('The name of the PostgreSQL Flexible Server.')
+output AZURE_POSTGRESQL_SERVER_NAME string = postgresql.outputs.serverName
 
 @description('The name of the Log Analytics Workspace.')
 output AZURE_LOG_ANALYTICS_WORKSPACE_NAME string = monitoring.outputs.logAnalyticsWorkspaceName

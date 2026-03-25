@@ -19,9 +19,9 @@
 
 **Purpose**: Add NuGet dependencies and architectural documentation
 
-- [ ] T001 Add Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1 and Microsoft.EntityFrameworkCore.Design 10.0.5 packages to api/Api.csproj
-- [ ] T002 [P] Add Microsoft.EntityFrameworkCore.Sqlite package to api/Api.Tests/Api.Tests.csproj
-- [ ] T003 [P] Create ADR-004 documenting the PostgreSQL decision in docs/adrs/004-postgresql-video-persistence.md
+- [X] T001 Add Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1 and Microsoft.EntityFrameworkCore.Design 10.0.5 packages to api/Api.csproj
+- [X] T002 [P] Add Microsoft.EntityFrameworkCore.Sqlite package to api/Api.Tests/Api.Tests.csproj
+- [X] T003 [P] Create ADR-004 documenting the PostgreSQL decision in docs/adrs/004-postgresql-video-persistence.md
 
 ---
 
@@ -31,16 +31,16 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create VideoStatus enum (Created, Uploaded, Processing, Ready, Failed) in api/Data/VideoStatus.cs
-- [ ] T005 [P] Create VideoConstants with PlaceholderUserId constant in api/Data/VideoConstants.cs
-- [ ] T006 Create Video entity with all 17 fields and column name mappings in api/Data/Video.cs
-- [ ] T007 Create StandupDbContext with Video DbSet and fluent API configuration in api/Data/StandupDbContext.cs
-- [ ] T008 Register NpgsqlDataSource with Entra token provider and IDbContextFactory in api/Program.cs
-- [ ] T009 Create initial EF Core migration for Videos table in api/Data/Migrations/
-- [ ] T010 [P] Create PostgreSQL Flexible Server Bicep module with Entra-only auth in infra/modules/postgresql.bicep
-- [ ] T011 [P] Add postgreSqlFlexibleServer abbreviation to infra/abbreviations.json
-- [ ] T012 Update infra/main.bicep to add postgresql module and wire outputs to function-app module
-- [ ] T013 Update infra/modules/function-app.bicep to add POSTGRESQL_HOST, POSTGRESQL_DATABASE, and POSTGRESQL_USERNAME app settings
+- [X] T004 Create VideoStatus enum (Created, Uploaded, Processing, Ready, Failed) in api/Data/VideoStatus.cs
+- [X] T005 [P] Create VideoConstants with PlaceholderUserId constant in api/Data/VideoConstants.cs
+- [X] T006 Create Video entity with all 17 fields and column name mappings in api/Data/Video.cs
+- [X] T007 Create StandupDbContext with Video DbSet and fluent API configuration in api/Data/StandupDbContext.cs
+- [X] T008 Register NpgsqlDataSource with Entra token provider and IDbContextFactory in api/Program.cs
+- [X] T009 Create initial EF Core migration for Videos table in api/Data/Migrations/
+- [X] T010 [P] Create PostgreSQL Flexible Server Bicep module with Entra-only auth in infra/modules/postgresql.bicep
+- [X] T011 [P] Add postgreSqlFlexibleServer abbreviation to infra/abbreviations.json
+- [X] T012 Update infra/main.bicep to add postgresql module and wire outputs to function-app module
+- [X] T013 Update infra/modules/function-app.bicep to add POSTGRESQL_HOST, POSTGRESQL_DATABASE, and POSTGRESQL_USERNAME app settings
 
 **Checkpoint**: Foundation ready — Video entity, DbContext, DI, migrations, and Azure infrastructure all in place. User story implementation can now begin.
 
@@ -58,19 +58,19 @@
 
 > **Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Write StandupDbContext configuration tests verifying Video entity mapping, indexes, and status string conversion in api/Api.Tests/Data/StandupDbContextTests.cs
-- [ ] T015 [P] [US1] Write CreateVideo tests asserting Video record creation with status=created, placeholder user ID, blob path, content type, file size, and videoId in response in api/Api.Tests/Functions/CreateVideoTests.cs
-- [ ] T016 [P] [US1] Write ProcessVideo tests asserting Video lookup by blob path, status update to processing, Cloudflare UID storage, videoId passed in meta, and edge cases (no matching video, Cloudflare failure) in api/Api.Tests/Functions/ProcessVideoTests.cs
-- [ ] T017 [P] [US1] Write CloudflareWebhook tests asserting two-tier Video lookup (meta.videoId then cloudflare_video_uid), status→ready transition, status→failed with error details, idempotent duplicate handling, and no-match warning in api/Api.Tests/Functions/CloudflareWebhookTests.cs
+- [X] T014 [P] [US1] Write StandupDbContext configuration tests verifying Video entity mapping, indexes, and status string conversion in api/Api.Tests/Data/StandupDbContextTests.cs
+- [X] T015 [P] [US1] Write CreateVideo tests asserting Video record creation with status=created, placeholder user ID, blob path, content type, file size, and videoId in response in api/Api.Tests/Functions/CreateVideoTests.cs
+- [X] T016 [P] [US1] Write ProcessVideo tests asserting Video lookup by blob path, status update to processing, Cloudflare UID storage, videoId passed in meta, and edge cases (no matching video, Cloudflare failure) in api/Api.Tests/Functions/ProcessVideoTests.cs
+- [X] T017 [P] [US1] Write CloudflareWebhook tests asserting two-tier Video lookup (meta.videoId then cloudflare_video_uid), status→ready transition, status→failed with error details, idempotent duplicate handling, and no-match warning in api/Api.Tests/Functions/CloudflareWebhookTests.cs
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Add VideoId property to CreateVideoResponse record in api/Models/CreateVideoResponse.cs
-- [ ] T019 [P] [US1] Add Guid videoId parameter to SubmitForTranscodingAsync in api/Services/ICloudflareStreamService.cs
-- [ ] T020 [US1] Update SubmitForTranscodingAsync to accept videoId and include it in the Cloudflare meta dictionary alongside blobPath in api/Services/CloudflareStreamService.cs
-- [ ] T021 [US1] Modify CreateVideo to inject IDbContextFactory, create Video record with status=created and PlaceholderUserId, and return videoId in response in api/Functions/CreateVideo.cs
-- [ ] T022 [US1] Modify ProcessVideo to inject IDbContextFactory, look up Video by blob path, update status to processing, store Cloudflare video UID, and pass videoId in meta to SubmitForTranscodingAsync in api/Functions/ProcessVideo.cs
-- [ ] T023 [US1] Modify CloudflareWebhook to inject IDbContextFactory, implement two-tier Video lookup (meta.videoId primary, cloudflare_video_uid fallback), update status to ready or failed with error details, and handle edge cases in api/Functions/CloudflareWebhook.cs
+- [X] T018 [P] [US1] Add VideoId property to CreateVideoResponse record in api/Models/CreateVideoResponse.cs
+- [X] T019 [P] [US1] Add Guid videoId parameter to SubmitForTranscodingAsync in api/Services/ICloudflareStreamService.cs
+- [X] T020 [US1] Update SubmitForTranscodingAsync to accept videoId and include it in the Cloudflare meta dictionary alongside blobPath in api/Services/CloudflareStreamService.cs
+- [X] T021 [US1] Modify CreateVideo to inject IDbContextFactory, create Video record with status=created and PlaceholderUserId, and return videoId in response in api/Functions/CreateVideo.cs
+- [X] T022 [US1] Modify ProcessVideo to inject IDbContextFactory, look up Video by blob path, update status to processing, store Cloudflare video UID, and pass videoId in meta to SubmitForTranscodingAsync in api/Functions/ProcessVideo.cs
+- [X] T023 [US1] Modify CloudflareWebhook to inject IDbContextFactory, implement two-tier Video lookup (meta.videoId primary, cloudflare_video_uid fallback), update status to ready or failed with error details, and handle edge cases in api/Functions/CloudflareWebhook.cs
 
 **Checkpoint**: Video status lifecycle fully trackable end-to-end. CreateVideo creates records, ProcessVideo transitions to processing, CloudflareWebhook transitions to ready/failed. All status transitions verified by automated tests.
 
@@ -86,11 +86,11 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Write tests asserting HLS URL, DASH URL, thumbnail URL, duration, input width, and input height are persisted from webhook payload in ready handler in api/Api.Tests/Functions/CloudflareWebhookTests.cs
+- [X] T024 [P] [US2] Write tests asserting HLS URL, DASH URL, thumbnail URL, duration, input width, and input height are persisted from webhook payload in ready handler in api/Api.Tests/Functions/CloudflareWebhookTests.cs
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Map playback URLs (HLS, DASH), thumbnail URL, duration, and input dimensions from CloudflareWebhookPayload to Video entity fields in the ready handler in api/Functions/CloudflareWebhook.cs
+- [X] T025 [US2] Map playback URLs (HLS, DASH), thumbnail URL, duration, and input dimensions from CloudflareWebhookPayload to Video entity fields in the ready handler in api/Functions/CloudflareWebhook.cs
 
 **Checkpoint**: Cloudflare playback URLs, thumbnail, duration, and dimensions persisted on video records. Verified by automated tests asserting each field is stored correctly.
 
@@ -106,7 +106,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T026 [US3] Write tests asserting all created Video records have UserId set to VideoConstants.PlaceholderUserId in api/Api.Tests/Functions/CreateVideoTests.cs
+- [X] T026 [US3] Write tests asserting all created Video records have UserId set to VideoConstants.PlaceholderUserId in api/Api.Tests/Functions/CreateVideoTests.cs
 
 **Checkpoint**: All video records confirmed to use the placeholder user ID. Schema ready for future authentication integration without migration.
 
@@ -116,9 +116,9 @@
 
 **Purpose**: Validation, documentation, and final verification
 
-- [ ] T027 [P] Verify all unit tests pass with dotnet test in api/
-- [ ] T028 Run quickstart.md validation steps for local end-to-end verification
-- [ ] T029 [P] Review documentation and ensure ADR-004 cross-references are complete in docs/adrs/
+- [X] T027 [P] Verify all unit tests pass with dotnet test in api/
+- [X] T028 Run quickstart.md validation steps for local end-to-end verification
+- [X] T029 [P] Review documentation and ensure ADR-004 cross-references are complete in docs/adrs/
 
 ---
 

@@ -2,12 +2,16 @@
 // Licensed under the Naked Standup Source-Available Temporary License
 // See LICENSE.md for license terms.
 
+using Api.Data;
 using Api.Services;
+using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -27,7 +31,49 @@ var host = new HostBuilder()
         {
             client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
         });
+
+        var postgresqlHost = Environment.GetEnvironmentVariable("POSTGRESQL_HOST")
+            ?? throw new InvalidOperationException(
+                "Required configuration setting 'POSTGRESQL_HOST' is missing. " +
+                "Ensure this environment variable is set in the Function App configuration.");
+        var postgresqlDatabase = Environment.GetEnvironmentVariable("POSTGRESQL_DATABASE")
+            ?? throw new InvalidOperationException(
+                "Required configuration setting 'POSTGRESQL_DATABASE' is missing. " +
+                "Ensure this environment variable is set in the Function App configuration.");
+        var postgresqlUsername = Environment.GetEnvironmentVariable("POSTGRESQL_USERNAME")
+            ?? throw new InvalidOperationException(
+                "Required configuration setting 'POSTGRESQL_USERNAME' is missing. " +
+                "Ensure this environment variable is set in the Function App configuration.");
+
+        var connectionString = $"Host={postgresqlHost};Database={postgresqlDatabase};" +
+            $"Username={postgresqlUsername};Ssl Mode=Require;Trust Server Certificate=true";
+
+        var credential = new DefaultAzureCredential();
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.UsePeriodicPasswordProvider(
+            async (_, ct) =>
+            {
+                var tokenRequest = new TokenRequestContext(
+                    new[] { "https://ossrdbms-aad.database.windows.net/.default" });
+                var token = await credential.GetTokenAsync(tokenRequest, ct);
+                return token.Token;
+            },
+            TimeSpan.FromMinutes(55),
+            TimeSpan.Zero);
+        var dataSource = dataSourceBuilder.Build();
+
+        services.AddSingleton(dataSource);
+        services.AddDbContextFactory<StandupDbContext>(options =>
+            options.UseNpgsql(dataSource));
     })
     .Build();
+
+using (var scope = host.Services.CreateScope())
+{
+    var dbContextFactory = scope.ServiceProvider
+        .GetRequiredService<IDbContextFactory<StandupDbContext>>();
+    await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+    await dbContext.Database.MigrateAsync();
+}
 
 await host.RunAsync();
