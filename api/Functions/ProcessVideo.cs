@@ -87,6 +87,13 @@ public sealed class ProcessVideo(
             var video = await dbContext.Videos
                 .FirstOrDefaultAsync(v => v.BlobPath == blobPath, cancellationToken);
 
+            if (video is null)
+            {
+                logger.LogWarning(
+                    "No Video record found for blob path. BlobPath={BlobPath}",
+                    blobPath);
+            }
+
             var sasResult = await sasUrlService.GenerateReadSasUrlAsync(blobPath, cancellationToken);
 
             logger.LogInformation(
@@ -97,7 +104,7 @@ public sealed class ProcessVideo(
             try
             {
                 cfResponse = await cloudflareStreamService.SubmitForTranscodingAsync(
-                    sasResult.SasUri, video?.Id ?? Guid.Empty, blobPath, cancellationToken);
+                    sasResult.SasUri, video?.Id, blobPath, cancellationToken);
             }
             catch (CloudflareStreamPermanentException ex)
             {
