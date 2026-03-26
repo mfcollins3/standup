@@ -3,17 +3,20 @@
 // See LICENSE.md for license terms.
 
 using System.Text.Json;
+using Api.Data;
 using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Functions;
 
 public sealed class CloudflareWebhook(
     ILogger<CloudflareWebhook> logger,
+    IDbContextFactory<StandupDbContext> dbContextFactory,
     IWebhookSignatureService signatureService)
 {
     private static readonly JsonSerializerOptions DeserializeOptions = new()
@@ -77,6 +80,9 @@ public sealed class CloudflareWebhook(
                     "Invalid JSON payload.")));
         }
 
+        var hasMetaVideoId = payload.Meta is not null
+            && payload.Meta.ContainsKey("videoId");
+
         if (payload.ReadyToStream)
         {
             logger.LogInformation(
@@ -85,6 +91,44 @@ public sealed class CloudflareWebhook(
                 payload.Uid,
                 payload.Duration,
                 payload.Size);
+
+            try
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var video = await FindVideoAsync(dbContext, payload, cancellationToken);
+
+                if (video is not null)
+                {
+                    video.HlsUrl = payload.Playback?.Hls;
+                    video.DashUrl = payload.Playback?.Dash;
+                    video.ThumbnailUrl = payload.Thumbnail;
+                    video.Duration = payload.Duration;
+                    video.InputWidth = payload.Input?.Width;
+                    video.InputHeight = payload.Input?.Height;
+                    video.Status = VideoStatus.Ready;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "No matching video found for ready-to-stream webhook. "
+                        + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                        payload.Uid,
+                        hasMetaVideoId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Intentionally do not rethrow to honor the webhook contract of always returning 200 OK,
+                // even when database operations fail, to avoid triggering Cloudflare retries.
+                logger.LogError(
+                    ex,
+                    "Error processing Cloudflare ready-to-stream webhook. "
+                    + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                    payload.Uid,
+                    hasMetaVideoId);
+            }
         }
         else if (payload.Status?.State == "error")
         {
@@ -94,23 +138,67 @@ public sealed class CloudflareWebhook(
                 payload.Uid,
                 payload.Status.ErrorReasonCode,
                 payload.Status.ErrorReasonText);
-        }
 
-        if (payload.Meta is not null)
-        {
-            payload.Meta.TryGetValue("blobpath", out var blobPath);
-            payload.Meta.TryGetValue("filename", out var fileName);
-            if (blobPath is not null || fileName is not null)
+            try
             {
-                logger.LogInformation(
-                    "Webhook metadata for video {VideoUid}: "
-                    + "BlobPath={BlobPath}, FileName={FileName}",
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var video = await FindVideoAsync(dbContext, payload, cancellationToken);
+
+                if (video is not null)
+                {
+                    video.ErrorReasonCode = payload.Status.ErrorReasonCode;
+                    video.ErrorReasonText = payload.Status.ErrorReasonText;
+                    video.Status = VideoStatus.Failed;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "No matching video found for error webhook. "
+                        + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                        payload.Uid,
+                        hasMetaVideoId);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Intentionally do not rethrow to honor the webhook contract of always returning 200 OK,
+                // even when database operations fail, to avoid triggering Cloudflare retries.
+                logger.LogError(
+                    ex,
+                    "Error processing Cloudflare error webhook. "
+                    + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
                     payload.Uid,
-                    blobPath,
-                    fileName);
+                    hasMetaVideoId);
             }
         }
 
         return new OkResult();
+    }
+
+    private static async Task<Video?> FindVideoAsync(
+        StandupDbContext dbContext,
+        CloudflareWebhookPayload payload,
+        CancellationToken cancellationToken)
+    {
+        if (payload.Meta is not null &&
+            payload.Meta.TryGetValue("videoId", out var videoIdObj) &&
+            Guid.TryParse(videoIdObj?.ToString(), out var videoId))
+        {
+            var video = await dbContext.Videos.FindAsync([videoId], cancellationToken);
+            if (video is not null)
+            {
+                return video;
+            }
+        }
+
+        if (payload.Uid is not null)
+        {
+            return await dbContext.Videos
+                .FirstOrDefaultAsync(v => v.CloudflareVideoUid == payload.Uid, cancellationToken);
+        }
+
+        return null;
     }
 }

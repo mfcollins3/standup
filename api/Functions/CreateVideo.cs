@@ -3,15 +3,19 @@
 // See LICENSE.md for license terms.
 
 using System.Text.Json;
+using Api.Data;
 using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Functions;
 
-public sealed class CreateVideo(ISasUrlService sasUrlService)
+public sealed class CreateVideo(
+    IDbContextFactory<StandupDbContext> dbContextFactory,
+    ISasUrlService sasUrlService)
 {
     private static readonly HashSet<string> AllowedContentTypes =
         ["video/mp4", "video/quicktime"];
@@ -68,9 +72,28 @@ public sealed class CreateVideo(ISasUrlService sasUrlService)
 
         var extension = request.ContentType == "video/quicktime" ? "mov" : "mp4";
         var blobPath = $"uploads/anonymous/{Guid.NewGuid()}.{extension}";
-        var result = await sasUrlService.GenerateSasUrlAsync(blobPath, cancellationToken);
+        var sasResult = await sasUrlService.GenerateSasUrlAsync(blobPath, cancellationToken);
+
+        var video = new Video
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = blobPath,
+            ContentType = request.ContentType,
+            FileSizeBytes = request.FileSizeBytes,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        dbContext.Videos.Add(video);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return new OkObjectResult(
-            new CreateVideoResponse(result.SasUri.ToString(), result.ExpiresAt.ToString("O")));
+            new CreateVideoResponse(
+                video.Id,
+                sasResult.SasUri.ToString(),
+                sasResult.ExpiresAt.ToString("O")));
     }
 }

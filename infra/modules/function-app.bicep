@@ -29,6 +29,15 @@ param appInsightsConnectionString string
 @description('The name of the Key Vault containing Cloudflare credentials.')
 param keyVaultName string
 
+@description('The fully qualified domain name of the PostgreSQL Flexible Server.')
+param postgresqlHost string
+
+@description('The name of the PostgreSQL database.')
+param postgresqlDatabase string = 'standup'
+
+@description('The PostgreSQL username (the managed identity name used for Entra auth).')
+param postgresqlUsername string
+
 // Storage Blob Delegator role — allows GetUserDelegationKey
 var storageBlobDelegatorRoleId = 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a'
 
@@ -111,6 +120,18 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 				{
 					name: 'CLOUDFLARE_WEBHOOK_SIGNING_SECRET'
 					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareWebhookSigningSecret)'
+				}
+				{
+					name: 'POSTGRESQL_HOST'
+					value: postgresqlHost
+				}
+				{
+					name: 'POSTGRESQL_DATABASE'
+					value: postgresqlDatabase
+				}
+				{
+					name: 'POSTGRESQL_USERNAME'
+					value: postgresqlUsername
 				}
 			]
 		}

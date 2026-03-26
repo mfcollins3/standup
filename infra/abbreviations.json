@@ -8,5 +8,6 @@
 	"applicationInsights": "appi",
 	"resourceGroup": "rg",
 	"eventGridSystemTopic": "evgt",
-	"eventGridSubscription": "evgs"
+	"eventGridSubscription": "evgs",
+	"postgreSqlFlexibleServer": "psql"
 }

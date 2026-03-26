@@ -6,15 +6,18 @@ using System.Collections.Concurrent;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Azure.Storage.Blobs;
+using Api.Data;
 using Api.Models;
 using Api.Services;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Functions;
 
 public sealed class ProcessVideo(
     ILogger<ProcessVideo> logger,
+    IDbContextFactory<StandupDbContext> dbContextFactory,
     ISasUrlService sasUrlService,
     ICloudflareStreamService cloudflareStreamService)
 {
@@ -80,6 +83,17 @@ public sealed class ProcessVideo(
         // ETag was added; remove it if processing fails so Event Grid retries can succeed
         try
         {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var video = await dbContext.Videos
+                .FirstOrDefaultAsync(v => v.BlobPath == blobPath, cancellationToken);
+
+            if (video is null)
+            {
+                logger.LogWarning(
+                    "No Video record found for blob path. BlobPath={BlobPath}",
+                    blobPath);
+            }
+
             var sasResult = await sasUrlService.GenerateReadSasUrlAsync(blobPath, cancellationToken);
 
             logger.LogInformation(
@@ -90,7 +104,7 @@ public sealed class ProcessVideo(
             try
             {
                 cfResponse = await cloudflareStreamService.SubmitForTranscodingAsync(
-                    sasResult.SasUri, blobPath, cancellationToken);
+                    sasResult.SasUri, video?.Id, blobPath, cancellationToken);
             }
             catch (CloudflareStreamPermanentException ex)
             {
@@ -102,6 +116,16 @@ public sealed class ProcessVideo(
                     + "ContentType={ContentType}, ContentLength={ContentLength}, "
                     + "FailureClassification={FailureClassification}",
                     blobPath, contentType, contentLength, "Permanent");
+
+                if (video is not null)
+                {
+                    video.Status = VideoStatus.Failed;
+                    video.ErrorReasonCode = "PermanentError";
+                    video.ErrorReasonText = ex.Message;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+
                 return;
             }
 
@@ -109,6 +133,14 @@ public sealed class ProcessVideo(
                 "Video submitted for transcoding. BlobPath={BlobPath}, "
                 + "VideoUid={VideoUid}, State={State}",
                 blobPath, cfResponse.Result?.Uid, cfResponse.Result?.Status?.State);
+
+            if (video is not null)
+            {
+                video.Status = VideoStatus.Processing;
+                video.CloudflareVideoUid = cfResponse.Result?.Uid;
+                video.UpdatedAt = DateTimeOffset.UtcNow;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
         }
         catch
         {
