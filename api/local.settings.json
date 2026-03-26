@@ -2,13 +2,6 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "AZURE_STORAGE_BLOB_ENDPOINT": "http://127.0.0.1:10000/devstoreaccount1",
-    "CLOUDFLARE_ACCOUNT_ID": "<your-account-id>",
-    "CLOUDFLARE_API_TOKEN": "<your-api-token>",
-    "CLOUDFLARE_WEBHOOK_SIGNING_SECRET": "<your-webhook-signing-secret>",
-    "POSTGRESQL_HOST": "<your-postgresql-host>",
-    "POSTGRESQL_DATABASE": "<your-postgresql-database>",
-    "POSTGRESQL_USERNAME": "<your-postgresql-username>"
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   }
 }
