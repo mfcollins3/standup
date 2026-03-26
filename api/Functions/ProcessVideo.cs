@@ -116,6 +116,16 @@ public sealed class ProcessVideo(
                     + "ContentType={ContentType}, ContentLength={ContentLength}, "
                     + "FailureClassification={FailureClassification}",
                     blobPath, contentType, contentLength, "Permanent");
+
+                if (video is not null)
+                {
+                    video.Status = VideoStatus.Failed;
+                    video.ErrorReasonCode = "PermanentError";
+                    video.ErrorReasonText = ex.Message;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+
                 return;
             }
 

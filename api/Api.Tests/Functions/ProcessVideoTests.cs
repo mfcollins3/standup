@@ -411,6 +411,48 @@ public sealed class ProcessVideoTests : IDisposable
         await _function.RunAsync(evt);
     }
 
+    [Fact]
+    public async Task RunAsync_PermanentCloudflareFailure_SetsVideoStatusToFailed()
+    {
+        var videoId = Guid.NewGuid();
+        _dbContext.Videos.Add(new Video
+        {
+            Id = videoId,
+            UserId = VideoConstants.PlaceholderUserId,
+            BlobPath = "uploads/test-fail.mp4",
+            ContentType = "video/mp4",
+            FileSizeBytes = 5_000_000,
+            Status = VideoStatus.Created,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var sasResult = new SasUrlResult(FakeReadSasUri, DateTimeOffset.UtcNow.AddMinutes(60));
+        _mockSasService
+            .Setup(s => s.GenerateReadSasUrlAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sasResult);
+        _mockCloudflareService
+            .Setup(s => s.SubmitForTranscodingAsync(It.IsAny<Uri>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new CloudflareStreamPermanentException("Rejected by Cloudflare"));
+
+        var evt = CreateBlobCreatedEvent(
+            "https://mystorageaccount.blob.core.windows.net/status-videos/uploads/test-fail.mp4",
+            "video/mp4",
+            5_000_000);
+
+        await _function.RunAsync(evt);
+
+        var video = await _dbContext.Videos.FindAsync(videoId);
+        await _dbContext.Entry(video!).ReloadAsync();
+        Assert.NotNull(video);
+        Assert.Equal(VideoStatus.Failed, video.Status);
+        Assert.Equal("PermanentError", video.ErrorReasonCode);
+        Assert.Equal("Rejected by Cloudflare", video.ErrorReasonText);
+    }
+
+
+
     // --- T017: Failure and retry behavior tests ---
 
     [Fact]

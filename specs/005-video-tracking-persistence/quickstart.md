@@ -42,12 +42,13 @@ Add PostgreSQL connection settings to `api/local.settings.json`:
   "Values": {
     "POSTGRESQL_HOST": "localhost",
     "POSTGRESQL_DATABASE": "standup",
-    "POSTGRESQL_USERNAME": "<your-macos-username>"
+    "POSTGRESQL_USERNAME": "<your-local-username>",
+    "POSTGRESQL_PASSWORD": "<your-postgresql-password>"
   }
 }
 ```
 
-> **Note**: When running locally, the `NpgsqlDataSourceBuilder` should be configured to use password authentication (or trust auth from `pg_hba.conf`) instead of Entra managed identity tokens. The `Program.cs` registration should detect the local environment and skip `UsePeriodicPasswordProvider`. See the implementation plan for details.
+> **Note**: When running locally, `Program.cs` detects the `Development` environment and uses `POSTGRESQL_PASSWORD` for authentication instead of Entra managed identity tokens.
 
 ## 4. Install NuGet Packages
 

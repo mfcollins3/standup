@@ -185,9 +185,8 @@ Azure Blob Storage ◄── Client uploads video file
     ▼
 ProcessVideo Function
     │ Looks up Video by BlobPath
-    │ Updates status: created → uploaded
     │ Submits to Cloudflare Stream (meta includes videoId + blobPath)
-    │ Updates status: uploaded → processing
+    │ Updates status: created → processing
     │ Stores CloudflareVideoUid
     ▼
 Cloudflare Stream ── transcodes video ── fires webhook

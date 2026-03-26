@@ -5,9 +5,10 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "CLOUDFLARE_ACCOUNT_ID": "<your-cloudflare-account-id>",
     "CLOUDFLARE_API_TOKEN": "<your-cloudflare-api-token>",
-    "CLOUDFLARE_WEBHOOK_SECRET": "<your-cloudflare-webhook-secret>",
-    "POSTGRESQL_HOST": "<your-postgresql-host>.postgres.database.azure.com",
+    "CLOUDFLARE_WEBHOOK_SIGNING_SECRET": "<your-cloudflare-webhook-signing-secret>",
+    "POSTGRESQL_HOST": "localhost",
     "POSTGRESQL_DATABASE": "standup",
-    "POSTGRESQL_USERNAME": "<your-postgresql-username>"
+    "POSTGRESQL_USERNAME": "<your-local-username>",
+    "POSTGRESQL_PASSWORD": "<your-postgresql-password>"
   }
 }
