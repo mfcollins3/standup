@@ -145,8 +145,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/quicktime",
             FileSizeBytes = 3_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
