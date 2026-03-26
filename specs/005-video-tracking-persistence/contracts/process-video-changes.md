@@ -80,4 +80,4 @@ Video.Status:  created  ──►  uploaded  ──►  processing
 |----------|----------------|-------------------|
 | No Video found for blob path | None (log warning) | Continue processing normally (videoId not included in meta) |
 | Cloudflare API failure | Set status → `failed`, store error details | Throw exception (Event Grid retry) |
-| Database unavailable | None | Log error, continue with Cloudflare submission (videoId not included in meta) |
+| Database unavailable | None | Throw exception (Event Grid retry) |

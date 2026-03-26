@@ -52,15 +52,15 @@ Central entity tracking a video through its lifecycle: creation, upload, transco
 
 ### VideoStatus (New — `api/Data/VideoStatus.cs`)
 
-Enum representing the video lifecycle states. Stored as a lowercase string in PostgreSQL.
+Enum representing the video lifecycle states. Stored as a PascalCase string in PostgreSQL (e.g., `"Created"`, `"Processing"`) using EF Core's `HasConversion<string>()`.
 
 | Value | String | Description |
 |-------|--------|-------------|
-| `Created` | `created` | Video record created, upload URL issued to client |
-| `Uploaded` | `uploaded` | Reserved for future blob-upload-confirmed event. Not set in the initial implementation |
-| `Processing` | `processing` | Submitted to Cloudflare Stream for transcoding |
-| `Ready` | `ready` | Transcoding complete, playback URLs available |
-| `Failed` | `failed` | Transcoding failed, error details stored |
+| `Created` | `Created` | Video record created, upload URL issued to client |
+| `Uploaded` | `Uploaded` | Reserved for future blob-upload-confirmed event. Not set in the initial implementation |
+| `Processing` | `Processing` | Submitted to Cloudflare Stream for transcoding |
+| `Ready` | `Ready` | Transcoding complete, playback URLs available |
+| `Failed` | `Failed` | Transcoding failed, error details stored |
 
 **State Transitions** (initial implementation):
 

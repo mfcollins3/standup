@@ -139,21 +139,35 @@ public sealed class CloudflareWebhook(
                 payload.Status.ErrorReasonCode,
                 payload.Status.ErrorReasonText);
 
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var video = await FindVideoAsync(dbContext, payload, cancellationToken);
+            try
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var video = await FindVideoAsync(dbContext, payload, cancellationToken);
 
-            if (video is not null)
-            {
-                video.ErrorReasonCode = payload.Status.ErrorReasonCode;
-                video.ErrorReasonText = payload.Status.ErrorReasonText;
-                video.Status = VideoStatus.Failed;
-                video.UpdatedAt = DateTimeOffset.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                if (video is not null)
+                {
+                    video.ErrorReasonCode = payload.Status.ErrorReasonCode;
+                    video.ErrorReasonText = payload.Status.ErrorReasonText;
+                    video.Status = VideoStatus.Failed;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "No matching video found for error webhook. "
+                        + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                        payload.Uid,
+                        hasMetaVideoId);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                logger.LogWarning(
-                    "No matching video found for error webhook. "
+                // Intentionally do not rethrow to honor the webhook contract of always returning 200 OK,
+                // even when database operations fail, to avoid triggering Cloudflare retries.
+                logger.LogError(
+                    ex,
+                    "Error processing Cloudflare error webhook. "
                     + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
                     payload.Uid,
                     hasMetaVideoId);

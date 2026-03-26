@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "CLOUDFLARE_ACCOUNT_ID": "<your-cloudflare-account-id>",
+    "CLOUDFLARE_API_TOKEN": "<your-cloudflare-api-token>",
+    "CLOUDFLARE_WEBHOOK_SECRET": "<your-cloudflare-webhook-secret>",
+    "POSTGRESQL_HOST": "<your-postgresql-host>.postgres.database.azure.com",
+    "POSTGRESQL_DATABASE": "standup",
+    "POSTGRESQL_USERNAME": "<your-postgresql-username>"
+  }
+}

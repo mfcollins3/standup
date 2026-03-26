@@ -30,6 +30,7 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
     authConfig: {
       activeDirectoryAuth: 'Enabled'
       passwordAuth: 'Disabled'
+      tenantId: subscription().tenantId
     }
     backup: {
       backupRetentionDays: 7

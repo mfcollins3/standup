@@ -55,7 +55,6 @@ CodeCoverage/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
-# NUnit
-*.VisualState.xml
-TestResult.xml
-nunit-*.xml
+# Azure Functions local settings (developer-specific, may contain secrets)
+local.settings.json
+

@@ -241,8 +241,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -285,8 +285,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -321,8 +321,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -357,8 +357,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -389,8 +389,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -424,8 +424,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -456,8 +456,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -488,8 +488,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -535,8 +535,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -578,8 +578,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
@@ -623,8 +623,8 @@ public sealed class ProcessVideoTests : IDisposable
             ContentType = "video/mp4",
             FileSizeBytes = 5_000_000,
             Status = VideoStatus.Created,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         });
         await _dbContext.SaveChangesAsync();
 
