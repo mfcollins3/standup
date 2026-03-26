@@ -92,25 +92,39 @@ public sealed class CloudflareWebhook(
                 payload.Duration,
                 payload.Size);
 
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var video = await FindVideoAsync(dbContext, payload, cancellationToken);
+            try
+            {
+                await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var video = await FindVideoAsync(dbContext, payload, cancellationToken);
 
-            if (video is not null)
-            {
-                video.HlsUrl = payload.Playback?.Hls;
-                video.DashUrl = payload.Playback?.Dash;
-                video.ThumbnailUrl = payload.Thumbnail;
-                video.Duration = payload.Duration;
-                video.InputWidth = payload.Input?.Width;
-                video.InputHeight = payload.Input?.Height;
-                video.Status = VideoStatus.Ready;
-                video.UpdatedAt = DateTimeOffset.UtcNow;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                if (video is not null)
+                {
+                    video.HlsUrl = payload.Playback?.Hls;
+                    video.DashUrl = payload.Playback?.Dash;
+                    video.ThumbnailUrl = payload.Thumbnail;
+                    video.Duration = payload.Duration;
+                    video.InputWidth = payload.Input?.Width;
+                    video.InputHeight = payload.Input?.Height;
+                    video.Status = VideoStatus.Ready;
+                    video.UpdatedAt = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "No matching video found for ready-to-stream webhook. "
+                        + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
+                        payload.Uid,
+                        hasMetaVideoId);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                logger.LogWarning(
-                    "No matching video found for ready-to-stream webhook. "
+                // Intentionally do not rethrow to honor the webhook contract of always returning 200 OK,
+                // even when database operations fail, to avoid triggering Cloudflare retries.
+                logger.LogError(
+                    ex,
+                    "Error processing Cloudflare ready-to-stream webhook. "
                     + "Uid={VideoUid}, HasMetaVideoId={HasMetaVideoId}",
                     payload.Uid,
                     hasMetaVideoId);
