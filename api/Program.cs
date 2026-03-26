@@ -46,7 +46,7 @@ var host = new HostBuilder()
                 "Ensure this environment variable is set in the Function App configuration.");
 
         var connectionString = $"Host={postgresqlHost};Database={postgresqlDatabase};" +
-            $"Username={postgresqlUsername};Ssl Mode=Require;Trust Server Certificate=true";
+            $"Username={postgresqlUsername};Ssl Mode=Require";
 
         // Determine if we are running in a local development environment.
         var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
