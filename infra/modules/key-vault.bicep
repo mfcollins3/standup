@@ -31,6 +31,16 @@ param cloudflareAccountId string
 @secure()
 param cloudflareWebhookSigningSecret string = ''
 
+@description('The Cloudflare signing key ID used to identify the RS256 key when generating signed stream URL tokens.')
+param cloudflareSigningKeyId string = ''
+
+@description('The Cloudflare signing key JWK (base64-encoded JSON) used to sign RS256 JWT tokens for Cloudflare Stream signed URLs.')
+@secure()
+param cloudflareSigningKeyJwk string = ''
+
+@description('The Cloudflare customer code used to construct signed manifest URLs for streaming.')
+param cloudflareCustomerCode string = ''
+
 // Key Vault Secrets Officer role — allows the Function App to set the host key secret
 var keyVaultSecretsOfficerRoleId = 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
 
@@ -123,5 +133,29 @@ resource webhookSigningSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = i
 	name: 'CloudflareWebhookSigningSecret'
 	properties: {
 		value: cloudflareWebhookSigningSecret
+	}
+}
+
+resource cloudflareSigningKeyIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(cloudflareSigningKeyId)) {
+	parent: keyVault
+	name: 'CloudflareSigningKeyId'
+	properties: {
+		value: cloudflareSigningKeyId
+	}
+}
+
+resource cloudflareSigningKeyJwkSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(cloudflareSigningKeyJwk)) {
+	parent: keyVault
+	name: 'CloudflareSigningKeyJwk'
+	properties: {
+		value: cloudflareSigningKeyJwk
+	}
+}
+
+resource cloudflareCustomerCodeSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(cloudflareCustomerCode)) {
+	parent: keyVault
+	name: 'CloudflareCustomerCode'
+	properties: {
+		value: cloudflareCustomerCode
 	}
 }

@@ -36,7 +36,8 @@ public sealed class CloudflareStreamService(
 
         var request = new CloudflareStreamRequest(
             Url: videoReadUrl.ToString(),
-            Meta: meta);
+            Meta: meta,
+            RequireSignedURLs: true);
 
         using var httpRequest = new HttpRequestMessage(
             HttpMethod.Post,

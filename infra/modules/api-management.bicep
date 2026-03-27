@@ -129,8 +129,63 @@ resource createVideoOperation 'Microsoft.ApiManagement/service/apis/operations@2
 	}
 }
 
-resource standupApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {
+resource getSignedStreamUrlOperation 'Microsoft.ApiManagement/service/apis/operations@2023-09-01-preview' = {
 	parent: standupApi
+	name: 'get-signed-stream-url'
+	properties: {
+		displayName: 'Get Signed Stream URL'
+		description: 'Request a signed HLS or DASH manifest URL for streaming a transcoded video via Cloudflare Stream.'
+		method: 'GET'
+		urlTemplate: '/video/{videoId}/stream'
+		templateParameters: [
+			{
+				name: 'videoId'
+				description: 'The unique identifier of the video.'
+				type: 'string'
+				required: true
+			}
+		]
+		request: {
+			queryParameters: [
+				{
+					name: 'streamType'
+					description: 'The desired stream format. Must be either "hls" or "dash".'
+					type: 'string'
+					required: true
+				}
+			]
+		}
+		responses: [
+			{
+				statusCode: 200
+				description: 'Signed manifest URL generated successfully'
+				representations: [
+					{
+						contentType: 'application/json'
+					}
+				]
+			}
+			{
+				statusCode: 400
+				description: 'Bad request — invalid or missing streamType parameter'
+			}
+			{
+				statusCode: 401
+				description: 'Unauthorized'
+			}
+			{
+				statusCode: 404
+				description: 'Video not found'
+			}
+			{
+				statusCode: 409
+				description: 'Video is not yet ready for streaming'
+			}
+		]
+	}
+}
+
+resource standupApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-09-01-preview' = {	parent: standupApi
 	name: 'policy'
 	dependsOn: [functionAppBackend, functionKeyNamedValue]
 	properties: {

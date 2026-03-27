@@ -33,6 +33,16 @@ param cloudflareAccountId string
 @secure()
 param cloudflareWebhookSigningSecret string = ''
 
+@description('The Cloudflare signing key ID used to identify the RS256 key when generating signed stream URL tokens.')
+param cloudflareSigningKeyId string = ''
+
+@description('The Cloudflare signing key JWK (base64-encoded JSON) used to sign RS256 JWT tokens for Cloudflare Stream signed URLs.')
+@secure()
+param cloudflareSigningKeyJwk string = ''
+
+@description('The Cloudflare customer code used to construct signed manifest URLs for streaming.')
+param cloudflareCustomerCode string = ''
+
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
@@ -89,6 +99,7 @@ module functionApp './modules/function-app.bicep' = {
 		postgresqlHost: postgresqlHost
 		postgresqlDatabase: 'standup'
 		postgresqlUsername: functionAppName
+		cloudflareCustomerCode: cloudflareCustomerCode
 	}
 }
 
@@ -131,6 +142,9 @@ module keyVault './modules/key-vault.bicep' = {
 		cloudflareApiToken: cloudflareApiToken
 		cloudflareAccountId: cloudflareAccountId
 		cloudflareWebhookSigningSecret: cloudflareWebhookSigningSecret
+		cloudflareSigningKeyId: cloudflareSigningKeyId
+		cloudflareSigningKeyJwk: cloudflareSigningKeyJwk
+		cloudflareCustomerCode: cloudflareCustomerCode
 	}
 }
 

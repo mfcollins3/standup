@@ -29,6 +29,9 @@ param appInsightsConnectionString string
 @description('The name of the Key Vault containing Cloudflare credentials.')
 param keyVaultName string
 
+@description('The Cloudflare customer code used to construct signed manifest URLs for streaming.')
+param cloudflareCustomerCode string = ''
+
 @description('The fully qualified domain name of the PostgreSQL Flexible Server.')
 param postgresqlHost string
 
@@ -120,6 +123,18 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
 				{
 					name: 'CLOUDFLARE_WEBHOOK_SIGNING_SECRET'
 					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareWebhookSigningSecret)'
+				}
+				{
+					name: 'CLOUDFLARE_SIGNING_KEY_ID'
+					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareSigningKeyId)'
+				}
+				{
+					name: 'CLOUDFLARE_SIGNING_KEY_JWK'
+					value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=CloudflareSigningKeyJwk)'
+				}
+				{
+					name: 'CLOUDFLARE_CUSTOMER_CODE'
+					value: cloudflareCustomerCode
 				}
 				{
 					name: 'POSTGRESQL_HOST'

@@ -27,6 +27,7 @@ var host = new HostBuilder()
         });
         services.AddSingleton<ISasUrlService, SasUrlService>();
         services.AddSingleton<IWebhookSignatureService, WebhookSignatureService>();
+        services.AddSingleton<ISignedUrlTokenService, SignedUrlTokenService>();
         services.AddHttpClient<ICloudflareStreamService, CloudflareStreamService>(client =>
         {
             client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");

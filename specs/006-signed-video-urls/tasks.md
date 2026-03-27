@@ -19,9 +19,9 @@
 
 **Purpose**: Add new NuGet dependency and configuration values needed across all user stories
 
-- [ ] T001 Add `System.IdentityModel.Tokens.Jwt` NuGet package to api/Api.csproj
-- [ ] T002 [P] Add `CLOUDFLARE_SIGNING_KEY_ID`, `CLOUDFLARE_SIGNING_KEY_JWK`, and `CLOUDFLARE_CUSTOMER_CODE` entries to api/local.settings.json.example
-- [ ] T003 [P] Create `StreamType` enum with `Hls` and `Dash` values in api/Models/StreamType.cs
+- [X] T001 Add `System.IdentityModel.Tokens.Jwt` NuGet package to api/Api.csproj
+- [X] T002 [P] Add `CLOUDFLARE_SIGNING_KEY_ID`, `CLOUDFLARE_SIGNING_KEY_JWK`, and `CLOUDFLARE_CUSTOMER_CODE` entries to api/local.settings.json.example
+- [X] T003 [P] Create `StreamType` enum with `Hls` and `Dash` values in api/Models/StreamType.cs
 
 ---
 
@@ -31,10 +31,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create `ISignedUrlTokenService` interface in api/Services/ISignedUrlTokenService.cs
-- [ ] T005 Create `SignedUrlTokenService` compilable skeleton class (`throw NotImplementedException` for all methods) in api/Services/SignedUrlTokenService.cs — real implementation deferred to T010 to preserve TDD ordering
-- [ ] T006 Register `ISignedUrlTokenService` as a singleton in DI in api/Program.cs
-- [ ] T007 Create `GetSignedStreamUrlResponse` response record in api/Models/GetSignedStreamUrlResponse.cs
+- [X] T004 Create `ISignedUrlTokenService` interface in api/Services/ISignedUrlTokenService.cs
+- [X] T005 Create `SignedUrlTokenService` compilable skeleton class (`throw NotImplementedException` for all methods) in api/Services/SignedUrlTokenService.cs — real implementation deferred to T010 to preserve TDD ordering
+- [X] T006 Register `ISignedUrlTokenService` as a singleton in DI in api/Program.cs
+- [X] T007 Create `GetSignedStreamUrlResponse` response record in api/Models/GetSignedStreamUrlResponse.cs
 
 **Checkpoint**: Foundation ready — service layer, models, and DI are in place. User story implementation can now begin.
 
@@ -50,14 +50,14 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T008 [P] [US1] Write unit tests for `SignedUrlTokenService` (valid token generation for HLS and DASH, correct JWT claims, correct expiration) in api/Api.Tests/Services/SignedUrlTokenServiceTests.cs
-- [ ] T009 [P] [US1] Write unit tests for `GetSignedStreamUrl` function (200 OK with valid video, 404 for missing video, 409 for not-ready video, 400 for invalid stream type, error when video is Ready but `CloudflareVideoUid` is null) in api/Api.Tests/Functions/GetSignedStreamUrlTests.cs
+- [X] T008 [P] [US1] Write unit tests for `SignedUrlTokenService` (valid token generation for HLS and DASH, correct JWT claims, correct expiration) in api/Api.Tests/Services/SignedUrlTokenServiceTests.cs
+- [X] T009 [P] [US1] Write unit tests for `GetSignedStreamUrl` function (200 OK with valid video, 404 for missing video, 409 for not-ready video, 400 for invalid stream type, error when video is Ready but `CloudflareVideoUid` is null) in api/Api.Tests/Functions/GetSignedStreamUrlTests.cs
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement `SignedUrlTokenService.GenerateSignedUrlAsync` — load RSA key from configuration, create RS256 JWT with `sub` (video UID), `kid` (signing key ID), and `exp` (1 hour from now), construct manifest URL with token in api/Services/SignedUrlTokenService.cs. Ensure signing key material is never included in log output (Constitution IV).
-- [ ] T011 [US1] Implement `GetSignedStreamUrl` Azure Function — HTTP GET `/video/{videoId}/stream`, parse `streamType` query parameter, look up video in database, validate status is Ready, call `ISignedUrlTokenService`, return `GetSignedStreamUrlResponse` or appropriate error response in api/Functions/GetSignedStreamUrl.cs
-- [ ] T012 [US1] Verify all unit tests in T008 and T009 pass
+- [X] T010 [US1] Implement `SignedUrlTokenService.GenerateSignedUrlAsync` — load RSA key from configuration, create RS256 JWT with `sub` (video UID), `kid` (signing key ID), and `exp` (1 hour from now), construct manifest URL with token in api/Services/SignedUrlTokenService.cs. Ensure signing key material is never included in log output (Constitution IV).
+- [X] T011 [US1] Implement `GetSignedStreamUrl` Azure Function — HTTP GET `/video/{videoId}/stream`, parse `streamType` query parameter, look up video in database, validate status is Ready, call `ISignedUrlTokenService`, return `GetSignedStreamUrlResponse` or appropriate error response in api/Functions/GetSignedStreamUrl.cs
+- [X] T012 [US1] Verify all unit tests in T008 and T009 pass
 
 **Checkpoint**: User Story 1 is fully functional. The API endpoint generates signed streaming URLs for ready videos.
 
@@ -73,12 +73,12 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [US2] Write or update unit tests for `ProcessVideo` to verify `requireSignedURLs: true` is passed in the `CloudflareStreamRequest` when submitting a video for transcoding in api/Api.Tests/Functions/ProcessVideoTests.cs
+- [X] T013 [US2] Write or update unit tests for `ProcessVideo` to verify `requireSignedURLs: true` is passed in the `CloudflareStreamRequest` when submitting a video for transcoding in api/Api.Tests/Services/CloudflareStreamServiceTests.cs
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Modify `CloudflareStreamService.SubmitForTranscodingAsync` to pass `RequireSignedURLs = true` in the `CloudflareStreamRequest` in api/Services/CloudflareStreamService.cs
-- [ ] T015 [US2] Verify all unit tests in T013 pass
+- [X] T014 [US2] Modify `CloudflareStreamService.SubmitForTranscodingAsync` to pass `RequireSignedURLs = true` in the `CloudflareStreamRequest` in api/Services/CloudflareStreamService.cs
+- [X] T015 [US2] Verify all unit tests in T013 pass
 
 **Checkpoint**: User Story 2 is complete. All newly uploaded videos require signed URLs for streaming.
 
@@ -94,12 +94,12 @@
 
 > **NOTE: These tests should already be covered by T008 and T009 expiration assertions. Add additional tests only if edge cases remain.**
 
-- [ ] T016 [US3] Review and extend `SignedUrlTokenServiceTests` to verify the JWT `exp` claim is set to 1 hour from token creation time and that `expiresAt` in the response is accurate in api/Api.Tests/Services/SignedUrlTokenServiceTests.cs
+- [X] T016 [US3] Review and extend `SignedUrlTokenServiceTests` to verify the JWT `exp` claim is set to 1 hour from token creation time and that `expiresAt` in the response is accurate in api/Api.Tests/Services/SignedUrlTokenServiceTests.cs
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Review `SignedUrlTokenService` implementation — confirm token expiration is set to 1 hour and `ExpiresAt` is returned accurately in api/Services/SignedUrlTokenService.cs
-- [ ] T018 [US3] Verify all unit tests in T016 pass
+- [X] T017 [US3] Review `SignedUrlTokenService` implementation — confirm token expiration is set to 1 hour and `ExpiresAt` is returned accurately in api/Services/SignedUrlTokenService.cs
+- [X] T018 [US3] Verify all unit tests in T016 pass
 
 **Checkpoint**: All three user stories are complete, independently testable, and verified.
 
@@ -109,10 +109,10 @@
 
 **Purpose**: Bicep updates for Key Vault secrets and APIM operation
 
-- [ ] T019 [P] Add `cloudflareSigningKeyId` and `cloudflareSigningKeyJwk` secure parameters and corresponding Key Vault secret resources in infra/modules/key-vault.bicep
-- [ ] T020 [P] Add `getSignedStreamUrl` APIM operation — `GET /video/{videoId}/stream` with `streamType` query parameter, following the existing `createVideoOperation` pattern in infra/modules/api-management.bicep
-- [ ] T021 [P] Add `cloudflareSigningKeyId`, `cloudflareSigningKeyJwk`, and `cloudflareCustomerCode` parameters to infra/modules/function-app.bicep and add corresponding app settings using Key Vault references (following the existing `CLOUDFLARE_API_TOKEN` pattern)
-- [ ] T022 Add new parameters (`cloudflareSigningKeyId`, `cloudflareSigningKeyJwk`, `cloudflareCustomerCode`) to the main Bicep template and wire them to the key-vault, function-app, and (where needed) other modules in infra/main.bicep and infra/main.bicepparam
+- [X] T019 [P] Add `cloudflareSigningKeyId` and `cloudflareSigningKeyJwk` secure parameters and corresponding Key Vault secret resources in infra/modules/key-vault.bicep
+- [X] T020 [P] Add `getSignedStreamUrl` APIM operation — `GET /video/{videoId}/stream` with `streamType` query parameter, following the existing `createVideoOperation` pattern in infra/modules/api-management.bicep
+- [X] T021 [P] Add `cloudflareSigningKeyId`, `cloudflareSigningKeyJwk`, and `cloudflareCustomerCode` parameters to infra/modules/function-app.bicep and add corresponding app settings using Key Vault references (following the existing `CLOUDFLARE_API_TOKEN` pattern)
+- [X] T022 Add new parameters (`cloudflareSigningKeyId`, `cloudflareSigningKeyJwk`, `cloudflareCustomerCode`) to the main Bicep template and wire them to the key-vault, function-app, and (where needed) other modules in infra/main.bicep and infra/main.bicepparam
 
 ---
 
@@ -120,9 +120,9 @@
 
 **Purpose**: Documentation, quickstart validation, and final verification
 
-- [ ] T023 [P] Create ADR for self-signed RS256 JWT token generation approach (documenting R1 decision: local signing over Cloudflare `/token` API) in docs/adrs/005-cloudflare-signed-url-token-generation.md
+- [X] T023 [P] Create ADR for self-signed RS256 JWT token generation approach (documenting R1 decision: local signing over Cloudflare `/token` API) in docs/adrs/005-cloudflare-signed-url-token-generation.md
 - [ ] T024 [P] Update quickstart.md with actual API output after end-to-end local testing in specs/006-signed-video-urls/quickstart.md
-- [ ] T025 Run all unit tests (`dotnet test`) and verify zero failures
+- [X] T025 Run all unit tests (`dotnet test`) and verify zero failures
 - [ ] T026 Run quickstart.md validation — start the Function App locally, create a video through the pipeline, request signed HLS and DASH URLs, verify responses match the contract
 
 ---
