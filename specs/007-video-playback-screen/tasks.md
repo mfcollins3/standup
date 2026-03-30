@@ -19,7 +19,7 @@
 
 **Purpose**: Create the `Playback/` feature directory to house the new playback screen source files.
 
-- [ ] T001 Create `Playback/` directory at `Apple/Projects/Standup/Sources/Playback/`
+- [X] T001 Create `Playback/` directory at `Apple/Projects/Standup/Sources/Playback/`
 
 ---
 
@@ -33,13 +33,13 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T002 [P] [US1] Write test that VideoPlaybackScreen initializes AVPlayer with the provided URL in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
+- [X] T002 [P] [US1] Write test that VideoPlaybackScreen initializes AVPlayer with the provided URL in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Create VideoPlaybackScreen view with AVKit VideoPlayer, loading indicator, auto-play on appear, and `.onDisappear` cleanup in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
-- [ ] T005 [US1] Add "Play Status Report" NavigationLink (using `String(localized:)` for the label) to MainView that navigates to VideoPlaybackScreen with hardcoded HLS URL `https://customer-j8jlsnmsytg4ne2z.cloudflarestream.com/2916cde874951283bc3cc8b7f3f9a9ba/manifest/video.m3u8` in `Apple/Projects/Standup/Sources/MainView.swift`
-- [ ] T006 [US1] Add SwiftUI Preview for VideoPlaybackScreen in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
+- [X] T004 [US1] Create VideoPlaybackScreen view with AVKit VideoPlayer, loading indicator, auto-play on appear, and `.onDisappear` cleanup in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
+- [X] T005 [US1] Add "Play Status Report" NavigationLink (using `String(localized:)` for the label) to MainView that navigates to VideoPlaybackScreen with hardcoded HLS URL `https://customer-j8jlsnmsytg4ne2z.cloudflarestream.com/2916cde874951283bc3cc8b7f3f9a9ba/manifest/video.m3u8` in `Apple/Projects/Standup/Sources/MainView.swift`
+- [X] T006 [US1] Add SwiftUI Preview for VideoPlaybackScreen in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
 
 **Checkpoint**: User Story 1 is fully functional — user can navigate to playback screen, watch HLS video with controls, and navigate back cleanly.
 
@@ -55,14 +55,14 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T007 [P] [US2] Write test that VideoPlaybackScreen displays error message when AVPlayerItem status transitions to `.failed` in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
-- [ ] T008 [P] [US2] Write test that VideoPlaybackScreen remains in stable state after error and navigation back in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
-- [ ] T003 [P] [US2] Write test that VideoPlaybackScreen transitions to error state when given an invalid URL in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
+- [X] T007 [P] [US2] Write test that VideoPlaybackScreen displays error message when AVPlayerItem status transitions to `.failed` in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
+- [X] T008 [P] [US2] Write test that VideoPlaybackScreen remains in stable state after error and navigation back in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
+- [X] T003 [P] [US2] Write test that VideoPlaybackScreen transitions to error state when given an invalid URL in `Apple/Projects/Standup/Tests/Playback/VideoPlaybackScreenTests.swift`
 
 ### Implementation for User Story 2
 
-- [ ] T009 [US2] Add Combine observation of AVPlayerItem.status to detect `.failed` state and extract error description in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
-- [ ] T010 [US2] Add error state UI overlay that displays user-facing error message when playback fails in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
+- [X] T009 [US2] Add Combine observation of AVPlayerItem.status to detect `.failed` state and extract error description in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
+- [X] T010 [US2] Add error state UI overlay that displays user-facing error message when playback fails in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
 
 **Checkpoint**: User Story 2 is complete — unreachable URLs show a clear error message; navigating back returns to a stable main screen.
 
@@ -72,7 +72,7 @@
 
 **Purpose**: Final validation and accessibility verification.
 
-- [ ] T011 Verify VoiceOver accessibility labels are present on the playback screen navigation link and error message in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
+- [X] T011 Verify VoiceOver accessibility labels are present on the playback screen navigation link and error message in `Apple/Projects/Standup/Sources/Playback/VideoPlaybackScreen.swift`
 - [ ] T012 Run quickstart.md validation — confirm all described behaviors work end-to-end on device or simulator
 - [ ] T013 Verify that AVKit VideoPlayer renders caption/subtitle tracks when present in the HLS manifest (manual test on device/simulator with a captioned stream)
 

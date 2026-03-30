@@ -11,6 +11,11 @@ struct MainView: View {
 				NavigationLink("Record Status Update") {
 					RecordingScreen()
 				}
+				NavigationLink(String(localized: "Play Status Report")) {
+					VideoPlaybackScreen(
+						url: URL(string: "https://customer-j8jlsnmsytg4ne2z.cloudflarestream.com/2916cde874951283bc3cc8b7f3f9a9ba/manifest/video.m3u8")!
+					)
+				}
 			}
 			.navigationTitle("Standup")
 		}
