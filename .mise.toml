@@ -1,0 +1,7 @@
+[settings]
+disable_tools = ["node"]
+
+[env]
+# Aspire installs the AppHost dependencies with `pnpm install --ignore-workspace`,
+# which skips the `allowBuilds` setting in aspire-apphost/pnpm-workspace.yaml.
+pnpm_config_allow_builds = '{"esbuild":true}'

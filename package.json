@@ -1,0 +1,45 @@
+{
+  "name": "@mfcollins3/standup",
+  "version": "0.0.0",
+  "description": "Naked Standup helps geographically distributed teams to communicate and track project status through asynchronous video updates",
+  "keywords": [
+    "agile",
+    "productivity",
+    "project",
+    "remote",
+    "saas",
+    "scrum",
+    "standup",
+    "video"
+  ],
+  "homepage": "https://nakedstandup.app",
+  "bugs": {
+    "email": "mfcollins3@me.com",
+    "url": "https://github.com/mfcollins3/standup/issues"
+  },
+  "license": "SEE LICENSE IN LICENSE.md",
+  "contributors": [
+    {
+      "name": "Michael Collins",
+      "email": "mfcollins3@me.com",
+      "url": "https://michaelfcollins3.dev"
+    }
+  ],
+  "packageManager": "pnpm@12.14.0",
+  "scripts": {
+    "aspire:start": "pnpm --dir aspire-apphost run aspire:start",
+    "aspire:build": "pnpm --dir aspire-apphost run aspire:build",
+    "aspire:dev": "pnpm --dir aspire-apphost run aspire:dev"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "private": true
+}

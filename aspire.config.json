@@ -1,0 +1,6 @@
+{
+  "appHost": {
+    "language": "typescript/nodejs",
+    "path": "aspire-apphost/apphost.mts"
+  }
+}
