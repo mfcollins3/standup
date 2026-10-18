@@ -5,8 +5,11 @@ import { createBuilder } from './.aspire/modules/aspire.mjs';
 
 const builder = await createBuilder();
 
-// Add your resources here, for example:
-// const redis = await builder.addContainer("cache", "redis:latest");
-// const postgres = await builder.addPostgres("db");
+const postgres = await builder.addAzurePostgresFlexibleServer("postgres")
+    .runAsContainer({
+        configureContainer: async (resource) => {
+            await resource.withPgAdmin();
+        },
+    });
 
 await builder.build().run();
