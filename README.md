@@ -8,12 +8,19 @@
 
 ### Prerequisites
 
+- [Aspire CLI](https://aspire.dev/get-started/install-cli/)
 - [Commitizen](https://commitizen-tools.github.io/commitizen/#global-installation-recommended)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Fast Node Manager](https://github.com/Schniz/fnm)
 - [Git](https://git-scm.com)
 - [GitHub CLI](https://cli.github.com)
+- [pnpm](https://pnpm.io/installation)
 - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell) **(OPTIONAL)**
 - [prek](https://prek.j178.dev/installation/)
 - [Python 3.15](https://www.python.org/downloads/)
+- [Visual Studio Code](https://code.visualstudio.com)
+  - [Aspire extension](https://aspire.dev/get-started/aspire-vscode-extension/)
+  - [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
 
 ### Clone the repository
 
@@ -42,11 +49,32 @@ same terminal, run:
 - **Apple macOS or Linux:**
 
   ```bash
+  cd standup
   ./setup.sh
   ```
 
 - **Microsoft Windows or PowerShell users:**
 
   ```powershell
+  cd standup
   &"./setup.ps1"
   ```
+
+### Running Naked Standup locally
+
+Naked Standup uses [Aspire](https://aspire.dev) as a local orchestrator to run
+locally for development, debugging, and testing. Aspire will use Docker Desktop
+to download and run services used by Naked Standup, will start the Naked
+Standup applications and services, and will connect them all together allowing
+you to run and explore Naked Standup locally.
+
+To run Naked Standup, open a terminal to the location where the Naked Standup
+repository is hosted and run:
+
+```bash
+aspire run
+```
+
+The `aspire run` command will start the Naked Standup application and will
+output the URL of the dashboard and the URL of the Naked Standup application
+that you can connect to in the terminal.
