@@ -3,4 +3,7 @@
 set -euo pipefail
 
 # Install prek to manage Git hook execution
-prek install
+prek install \
+    --hook-type commit-msg \
+    --hook-type pre-commit \
+    --hook-type pre-push
