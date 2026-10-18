@@ -8,7 +8,9 @@ const builder = await createBuilder();
 const postgres = await builder.addAzurePostgresFlexibleServer("postgres")
     .runAsContainer({
         configureContainer: async (resource) => {
-            await resource.withPgAdmin();
+            await resource.withPgAdmin()
+                .withDataVolume({ isReadOnly: false })
+                .withRepl();
         },
     });
 
