@@ -8,6 +8,8 @@
   },
   "packages": {
     "Aspire.Hosting.Azure.PostgreSQL": "13.6.1",
-    "Aspire.Hosting.PostgreSQL": "13.6.1"
+    "Aspire.Hosting.PostgreSQL": "13.6.1",
+    "Aspire.Hosting.Keycloak": "13.6.1-preview.1.26506.6",
+    "CommunityToolkit.Aspire.Hosting.Keycloak.Extensions": "13.6.1-beta.935"
   }
 }
