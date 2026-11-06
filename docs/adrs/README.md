@@ -11,3 +11,4 @@ New ADRs are created in the `proposed` state with a file name that starts with
 | ADR | Status | Decision |
 | --- | ------ | -------- |
 | [Build the web app with Phoenix LiveView, phoenix_vite and React islands](draft-web-app-phoenix-with-phoenix-vite-and-react.md) | proposed | The web app is a Phoenix LiveView application bundled with phoenix_vite, with React and TypeScript islands for rich browser components, and pnpm for JavaScript dependencies. |
+| [Use an Aspire TypeScript AppHost for local orchestration and Azure provisioning](draft-aspire-typescript-apphost-for-orchestration-and-provisioning.md) | proposed | An Aspire AppHost written in TypeScript runs the web app and PostgreSQL locally, and defines the Azure resources the product is deployed to. |
