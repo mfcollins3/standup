@@ -310,6 +310,35 @@ workflow, and delete the old group:
 az group delete --name <the old resource group> --yes --no-wait
 ```
 
+### `VaultAlreadyExists` from `provision-postgres-kv`
+
+```
+Failed to provision postgres-kv: Deployment failed: VaultAlreadyExists: The vault
+name 'postgreskv-<suffix>' is already in use.
+```
+
+Key Vault names are unique across all of Azure, and the name is made from the
+resource group's ID, so a resource group that is deleted and created again with
+**the same name** gets the same Key Vault name. Deleting a group only *soft*
+deletes its Key Vault, and Azure keeps the name reserved until the vault is
+purged (90 days by default). This is what happens when you reuse the old group's
+name after a failed deployment, instead of choosing a new name as described above.
+
+If you did reuse the name, find the soft-deleted vault and purge it. **Purging
+cannot be undone**, so check that the vault is one that you no longer need. A vault
+that a failed first deployment created is empty, because Aspire only stores the
+database connection string in it after the database is provisioned.
+
+```shell
+az keyvault list-deleted \
+  --query "[].{name:name, location:properties.location, deleted:properties.deletionDate}" \
+  --output table
+
+az keyvault purge --name <the vault's name> --location <the vault's location>
+```
+
+Then run the workflow again.
+
 ## Things to know
 
 * **Database migrations run when the container starts**, before the server
