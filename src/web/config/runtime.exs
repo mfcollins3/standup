@@ -23,6 +23,36 @@ end
 config :standup, StandupWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# The database connection comes from the DB_URI environment variable, for example
+# postgresql://USER:PASS@HOST:PORT/DATABASE. Aspire sets it when it runs the app
+# locally, and the Azure deployment sets it in production. It overrides the
+# defaults in config/dev.exs. Tests never read it, so they cannot touch another
+# database by accident.
+#
+# Set DATABASE_SSL=true to connect with TLS and verify the server certificate,
+# which Azure Database for PostgreSQL requires.
+database_uri = if config_env() in [:dev, :prod], do: System.get_env("DB_URI")
+
+if database_uri do
+  database_ssl =
+    if System.get_env("DATABASE_SSL") in ~w(true 1) do
+      host = database_uri |> URI.parse() |> Map.fetch!(:host) |> String.to_charlist()
+
+      [
+        verify: :verify_peer,
+        cacerts: :public_key.cacerts_get(),
+        server_name_indication: host,
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ]
+      ]
+    else
+      false
+    end
+
+  config :standup, Standup.Repo, url: database_uri, ssl: database_ssl
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :standup, StandupWeb.Endpoint,
@@ -39,18 +69,15 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
+  database_uri ||
+    raise """
+    environment variable DB_URI is missing.
+    For example: postgresql://USER:PASS@HOST:5432/DATABASE
+    """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :standup, Standup.Repo,
-    # ssl: true,
-    url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
     # pool_count: 4,

@@ -1,5 +1,25 @@
 *               text=auto
 
+*.css           text eol=lf
+*.ex            text eol=lf
+*.exs           text eol=lf
+*.heex          text eol=lf
+*.ico           binary
+*.js            text eol=lf
+*.json          text eol=lf
+*.lock          text eol=lf
 *.md            text eol=lf
+*.mjs           text eol=lf
+*.mts           text eol=lf
+*.po            text eol=lf
+*.pot           text eol=lf
+*.svg           text eol=lf
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.txt           text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
 
 .gitattributes  text eol=lf
+.gitignore      text eol=lf
+.tool-versions  text eol=lf
