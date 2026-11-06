@@ -8,7 +8,7 @@
 
 **Acceptance Criteria:**
 
-- [ ] Users choose a project and record using the camera and microphone after granting browser permission.
+- [x] Users choose a project and record using the camera and microphone after granting browser permission.
 - [ ] The app shows a live preview, elapsed time, a record/stop control and the remaining time.
 - [ ] Recording stops automatically at 5 minutes and tells the user.
 - [ ] Users can review, discard and re-record before uploading.
