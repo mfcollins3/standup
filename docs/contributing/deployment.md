@@ -51,10 +51,33 @@ az login
 
 SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
 TENANT_ID="$(az account show --query tenantId --output tsv)"
-LOCATION="westus3"                     # an Azure region
+LOCATION="southcentralus"              # an Azure region, see below
 RESOURCE_GROUP="rg-standup-production"
 GITHUB_REPOSITORY="mfcollins3/standup"
 ```
+
+**Check the region before you use it.** The database is the part that is most
+likely to fail, because Azure does not offer every SKU in every region, and
+offers some only to some subscriptions. The AppHost asks for a `Standard_B1ms`
+(Burstable) server with PostgreSQL 16, and it always pins the server to
+availability zone 1. It cannot change these, so the region has to offer that
+SKU **and** have availability zones:
+
+```shell
+az postgres flexible-server list-skus --location "$LOCATION" \
+  --query "[0].supportedServerEditions[?name=='Burstable'].supportedServerSkus[] | [?name=='Standard_B1ms'].{sku:name, zones:supportedZones}" \
+  --output json
+```
+
+You want to see `Standard_B1ms` with zones `1`, `2` and `3`. If the output is
+empty, the region does not offer the SKU to your subscription, and Azure says
+why in the `reason` field of `az postgres flexible-server list-skus --location
+"$LOCATION"`. If `zones` is empty, the region has no availability zones. Both
+mean that you should choose another region.
+
+This list shows what Azure offers, not what it has free right now. If the
+deployment is accepted and then fails after a minute with `SkuNotAvailable`,
+see [SkuNotAvailable](#skunotavailable-from-the-database).
 
 ### 2. Register the resource providers
 
@@ -77,7 +100,20 @@ az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
 The workflow logs in as an app registration that has a federated credential for
 the `production` environment of this repository, so it needs no secret.
 
+Azure compares the credential's subject with the subject in GitHub's token
+**exactly**, and GitHub builds that subject in one of two ways. Repositories with
+the immutable subject setting turned on, which is the default for newer
+repositories, put the numeric owner and repository IDs in it, for example
+`repo:owner@123/name@456:environment:production`. Older repositories use
+`repo:owner/name:environment:production`. Ask GitHub for the prefix that this
+repository uses, so that the credential matches:
+
 ```shell
+SUBJECT_PREFIX="$(gh api "repos/${GITHUB_REPOSITORY}/actions/oidc/customization/sub" \
+  --jq '.sub_claim_prefix // empty')"
+SUBJECT_PREFIX="${SUBJECT_PREFIX:-repo:${GITHUB_REPOSITORY}}"
+echo "$SUBJECT_PREFIX:environment:production"
+
 APP_ID="$(az ad app create --display-name "standup-github-deploy" \
   --query appId --output tsv)"
 az ad sp create --id "$APP_ID"
@@ -86,12 +122,15 @@ az ad app federated-credential create --id "$APP_ID" --parameters "$(cat <<EOF
 {
   "name": "github-production",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:${GITHUB_REPOSITORY}:environment:production",
+  "subject": "${SUBJECT_PREFIX}:environment:production",
   "audiences": ["api://AzureADTokenExchange"]
 }
 EOF
 )"
 ```
+
+If a login fails with `AADSTS700213`, the subject is wrong. See
+[Troubleshooting](#troubleshooting).
 
 ### 5. Give it access to the resource group
 
@@ -170,6 +209,135 @@ az containerapp logs show --name web --resource-group "$RESOURCE_GROUP" --follow
 az containerapp show --name web --resource-group "$RESOURCE_GROUP" \
   --query "properties.template.containers[0].image" --output tsv
 ```
+
+## Troubleshooting
+
+Open the failed run in the Actions tab and find the step with the red cross. The
+failures below are the ones that are most likely on a first deployment.
+
+### "Log in to Azure" says `client-id` and `tenant-id` are missing
+
+The variables of the `production` environment are empty. The step's log lists the
+values that it received, and the `Azure__SubscriptionId:` line in the `env`
+block is blank when `AZURE_SUBSCRIPTION_ID` is not set. Check the environment's
+variables under **Settings**, **Environments**, **production**. The variables
+must be on that environment, not only in your shell.
+
+### `AADSTS700213: No matching federated identity record found`
+
+Azure rejected the login because the credential's subject is not the subject that
+GitHub sent. The failing step prints the one that GitHub sent, on the line that
+starts with `subject claim`. The credential has to match it exactly:
+
+```shell
+az ad app federated-credential list --id "$APP_ID" \
+  --query "[].{name:name, subject:subject}" --output table
+```
+
+If they differ, correct the credential. Use the subject from the log:
+
+```shell
+az ad app federated-credential update --id "$APP_ID" \
+  --federated-credential-id github-production \
+  --parameters '{
+    "name": "github-production",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "<the subject claim from the log>",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+```
+
+A change can take a few minutes to reach all of Microsoft Entra. A step that runs
+right after the change can still fail with this error, even though the credential
+is correct, so wait a few minutes and run the workflow again.
+
+### `SkuNotAvailable` from the database
+
+`provision-postgres` fails with `Specified SKU is not supported in this region`.
+There are two causes, and the time at which it fails tells you which one it is.
+
+* **The request is rejected at once.** The region does not offer the SKU to your
+  subscription. `az postgres flexible-server list-skus` (see
+  [Choose the settings](#1-choose-the-settings)) shows this and gives the reason.
+* **The request is accepted, and fails about a minute later.** The region lists
+  the SKU, but Azure could not allocate it in availability zone 1 at that time.
+  Azure's error does not say more. The AppHost cannot choose another zone or SKU,
+  so the fix is another region.
+
+The SKU list does not predict the second case. A region can list `Standard_B1ms`
+with zones `1`, `2` and `3` and still fail. The only reliable check is to create
+a server with the same settings that the AppHost uses, and delete it. It takes
+about five minutes and costs very little:
+
+```shell
+az group create --name rg-standup-skutest --location "$LOCATION"
+az postgres flexible-server create \
+  --resource-group rg-standup-skutest --location "$LOCATION" \
+  --name "standup-skutest-$RANDOM" \
+  --tier Burstable --sku-name Standard_B1ms --version 16 \
+  --storage-size 32 --zone 1 --public-access None \
+  --admin-user skutestadmin --admin-password "Aa1$(openssl rand -hex 12)" \
+  --yes
+
+# Delete it, whether it worked or not:
+az group delete --name rg-standup-skutest --yes
+```
+
+If the `create` fails with `SkuNotAvailable`, choose another region.
+
+Azure's own record of the failure is in the deployment history:
+
+```shell
+az deployment group list --resource-group "$RESOURCE_GROUP" \
+  --query "[?properties.provisioningState=='Failed'].{name:name, time:properties.timestamp}" \
+  --output table
+az deployment operation group list --resource-group "$RESOURCE_GROUP" \
+  --name <the failed deployment's name> \
+  --query "[?properties.provisioningState=='Failed'].properties.statusMessage" \
+  --output json
+```
+
+To use another region, **use a new resource group**. The earlier run already
+created the Container Apps environment, the registry and the other resources in
+the old region, and their names come from the resource group, so a deployment to a
+new region cannot move them. A new group name gives new names and avoids a clash
+with the soft-deleted Key Vault that deleting the old group leaves behind. Run
+step 3 and step 5 again for the new group, set the `AZURE_LOCATION` and
+`AZURE_RESOURCE_GROUP` variables of the `production` environment, run the
+workflow, and delete the old group:
+
+```shell
+az group delete --name <the old resource group> --yes --no-wait
+```
+
+### `VaultAlreadyExists` from `provision-postgres-kv`
+
+```
+Failed to provision postgres-kv: Deployment failed: VaultAlreadyExists: The vault
+name 'postgreskv-<suffix>' is already in use.
+```
+
+Key Vault names are unique across all of Azure, and the name is made from the
+resource group's ID, so a resource group that is deleted and created again with
+**the same name** gets the same Key Vault name. Deleting a group only *soft*
+deletes its Key Vault, and Azure keeps the name reserved until the vault is
+purged (90 days by default). This is what happens when you reuse the old group's
+name after a failed deployment, instead of choosing a new name as described above.
+
+If you did reuse the name, find the soft-deleted vault and purge it. **Purging
+cannot be undone**, so check that the vault is one that you no longer need. A vault
+that a failed first deployment created is empty, because Aspire only stores the
+database connection string in it after the database is provisioned.
+
+```shell
+az keyvault list-deleted \
+  --query "[].{name:name, location:properties.location, deleted:properties.deletionDate}" \
+  --output table
+
+az keyvault purge --name <the vault's name> --location <the vault's location>
+```
+
+Then run the workflow again.
 
 ## Things to know
 

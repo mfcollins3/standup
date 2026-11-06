@@ -108,10 +108,13 @@ flowchart LR
 * Good, because building the image does not need Azure credentials, and the
   deployment can be run later, or repeated, for any published image.
 * Bad, because the image in ACR is built by Aspire, so its manifest digest is
-  not guaranteed to be the digest of the image in GHCR. Its configuration and
-  layers are identical: building the `FROM` image locally from the published
-  arm64 image gave the same image ID and the same layer digests. The deployed
-  content can be checked against the published image through the `FROM` line.
+  not the digest of the image in GHCR. In the first deployment, the ACR image
+  had the manifest digest `sha256:6253c179…`, and the published `linux/amd64`
+  image has `sha256:ee23f3d9…`. The content is identical: both have the image
+  configuration `sha256:17d39921…` and the same six layers, and a local build of
+  the `FROM` image from the published arm64 image also had the same image ID and
+  layer digests. The deployed content can be checked against the published image
+  through its configuration digest, or through the `FROM` line.
 * Bad, because `aspire deploy` builds on the deployment runner, which therefore
   needs Docker and has to pull the image from GHCR. It builds for the runner's
   platform only, which is `linux/amd64`.
