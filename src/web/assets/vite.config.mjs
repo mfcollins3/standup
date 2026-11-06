@@ -7,7 +7,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    cors: { origin: "http://localhost:4000" },
+    // No `cors` option on purpose. Vite's default allows pages on localhost and
+    // 127.0.0.1 on any port, and nothing else. The page is not always on port
+    // 4000: Aspire serves the app through a proxy on a random port, so allowing
+    // only http://localhost:4000 blocks the scripts there.
   },
   optimizeDeps: {
     // https://vitejs.dev/guide/dep-pre-bundling#monorepos-and-linked-dependencies

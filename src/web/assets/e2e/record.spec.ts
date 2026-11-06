@@ -210,3 +210,25 @@ test.describe("when the camera cannot be used", () => {
     await expect(page.getByRole("alert")).toContainText("No camera or microphone was found");
   });
 });
+
+test.describe("the page in development", () => {
+  // The page is not always on http://localhost:4000. Aspire serves the app
+  // through a proxy on a random port, and http://127.0.0.1:4000 is a different
+  // origin than http://localhost:4000. The Vite dev server, which serves the
+  // page's JavaScript from another port, has to allow all of them, or the page
+  // loads with no JavaScript and the recorder never appears.
+  for (const origin of ["http://127.0.0.1:4000", "http://localhost:4000"]) {
+    test(`loads its JavaScript when opened from ${origin}`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error") errors.push(message.text());
+      });
+
+      await page.goto(`${origin}/record`);
+
+      // The recorder is a React component, so it only appears when the scripts load.
+      await expect(page.getByRole("status")).toBeVisible();
+      expect(errors.filter((error) => /CORS/i.test(error))).toEqual([]);
+    });
+  }
+});
