@@ -92,9 +92,12 @@ flowchart LR
   project.
 * Bad, because phoenix_vite does not provide React support, so the Fast
   Refresh preamble and the island hook are maintained in this project.
-* Bad, because the Vite plugins are pinned by compatibility. phoenix_vite
-  targets Vite 6 and 7, so `@vitejs/plugin-react` is held at version 5, which
-  supports those versions, rather than version 6, which requires Vite 8.
+* Bad, because phoenix_vite is developed against Vite 7 and its installer
+  generates a Vite 6 project. This project uses the latest Vite (8), which was
+  verified with phoenix_vite 0.6.1: the production build, the dev server, and
+  hot module replacement all work. phoenix_vite's JavaScript plugin declares no
+  supported Vite versions, so upgrading Vite or phoenix_vite needs the same
+  check.
 * Bad, because phoenix_vite supports npm and bun but not pnpm, so a small
   amount of glue code is needed, and must be kept when phoenix_vite is
   upgraded.
