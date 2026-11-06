@@ -30,22 +30,28 @@ same image that was built and tested?
 * The Azure deployment is a manual step (see issue
   [#61](https://github.com/mfcollins3/standup/issues/61)), so building the image
   must not depend on the deployment.
+* The Container App must run an image from the Azure Container Registry that
+  Aspire provisions, and must be able to pull from it without stored
+  credentials.
 * The build should record where the image came from (provenance).
 
 ## Considered Options
 
+* Build once in GitHub Actions, publish to GHCR, and have Aspire deploy a
+  one-line `FROM` image that is pushed to ACR
 * Build once in GitHub Actions, publish to GHCR, and import the image into ACR
-  at deployment time
+  with `az acr import`
 * Build once in GitHub Actions and push to both GHCR and ACR
-* Let Aspire build a second image for ACR during deployment
+* Let Aspire build a second image from the source during deployment
 * Build both platforms in one job with emulation (QEMU)
 
 ## Decision Outcome
 
-Chosen option: "Build once in GitHub Actions, publish to GHCR, and import the
-image into ACR at deployment time", because it builds the image once, so the
-deployed image is the one that was published, and it keeps the build
-independent of Azure.
+Chosen option: "Build once in GitHub Actions, publish to GHCR, and have Aspire
+deploy a one-line `FROM` image that is pushed to ACR", because it builds the
+application image once, deploys exactly the layers that were published, and is
+the only way that was found to get Aspire to push the image to ACR and give the
+Container App access to pull it from there.
 
 The decision has these parts:
 
@@ -64,13 +70,17 @@ The decision has these parts:
 * **GHCR is the distribution registry.** The image is published as
   `ghcr.io/<owner>/standup-web`, and an
   `org.opencontainers.image.source` label links the package to the repository.
-* **Import into ACR, don't rebuild.** The deployment workflow (issue
-  [#61](https://github.com/mfcollins3/standup/issues/61)) copies the image
-  from GHCR into the ACR that Aspire provisions, with `az acr import` and by
-  digest. Aspire deploys that image and does not build one.
+  The package is public.
 * **Provenance.** The final job records a build provenance attestation for the
   published image. Per-platform attestations are disabled, because they would
-  make the combined image an index of indexes.
+  make the combined image an index of indexes. The deployment workflow verifies
+  the attestation before it deploys.
+* **Deploy a `FROM` image.** The AppHost declares the web app as an image that
+  Aspire builds from `src/apphost/web-image/Dockerfile`, which only says
+  `FROM ghcr.io/<owner>/standup-web@sha256:<digest>`. The deployment workflow
+  resolves a tag to that digest. `aspire deploy` builds the image, pushes it to
+  the ACR that it provisions, and deploys the Container App with a managed
+  identity that has the `AcrPull` role.
 
 ```mermaid
 flowchart LR
@@ -80,22 +90,31 @@ flowchart LR
     arm -- "push by digest" --> ghcr
     ghcr --> merge["Merge job<br/>manifest list + tags<br/>+ provenance"]
     merge --> ghcr
-    ghcr -- "az acr import (by digest)" --> acr[("Azure Container<br/>Registry")]
-    acr -- "aspire deploy (#61)" --> aca["Azure Container Apps"]
+    ghcr -- "FROM image@digest<br/>(aspire deploy builds web-image)" --> acr[("Azure Container<br/>Registry")]
+    acr -- "pulled with a managed identity" --> aca["Azure Container Apps"]
 ```
 
 ### Consequences
 
-* Good, because the image that runs in Azure has the same digest as the image in
-  GHCR, so what was built is what is deployed.
+* Good, because the layers that run in Azure are the layers that were built and
+  attested in CI. The `FROM` image is pinned to the digest that was verified.
+* Good, because Aspire handles the registry: it pushes the image and configures
+  the Container App's registry and pull identity, so the deployment needs no
+  registry credentials and no extra steps.
 * Good, because builds are native and cached, so they are not slowed down by
   emulation.
 * Good, because anyone can pull the image from GHCR to run the app locally on
   either architecture.
 * Good, because building the image does not need Azure credentials, and the
   deployment can be run later, or repeated, for any published image.
-* Bad, because the deployment workflow needs to read from GHCR to import the
-  image, which needs a token if the package is private.
+* Bad, because the image in ACR is built by Aspire, so its manifest digest is
+  not guaranteed to be the digest of the image in GHCR. Its configuration and
+  layers are identical: building the `FROM` image locally from the published
+  arm64 image gave the same image ID and the same layer digests. The deployed
+  content can be checked against the published image through the `FROM` line.
+* Bad, because `aspire deploy` builds on the deployment runner, which therefore
+  needs Docker and has to pull the image from GHCR. It builds for the runner's
+  platform only, which is `linux/amd64`.
 * Bad, because the image is stored in two registries, GHCR and ACR, which costs
   some extra storage.
 * Bad, because two builds run for every change, which uses twice the runner
@@ -114,17 +133,32 @@ flowchart LR
 * After a merge to the main branch, `docker buildx imagetools inspect
   ghcr.io/<owner>/standup-web:latest` lists both `linux/amd64` and
   `linux/arm64`.
-* The deployment workflow (issue
-  [#61](https://github.com/mfcollins3/standup/issues/61)) checks that the image
-  digest in ACR matches the digest in GHCR.
+* The Bicep that Aspire generates for the Container App has a `registries`
+  entry with the registry's login server and the pull identity. It does not for
+  an image that Aspire did not build, which is why this option was chosen over
+  importing the image.
+* The deployment workflow verifies the image's attestation, and ends by
+  checking that the deployed app answers `GET /healthz`.
 
 ## Pros and Cons of the Options
 
-### Build once in GitHub Actions, publish to GHCR, and import the image into ACR at deployment time
+### Build once in GitHub Actions, publish to GHCR, and have Aspire deploy a one-line `FROM` image that is pushed to ACR
 
-* Good, because of the single build and the same digest everywhere.
-* Good, because the build and the deployment are independent.
-* Bad, because of the extra import step and the second copy of the image.
+* Good, because Aspire pushes the image and sets up the pull access itself.
+* Good, because the layers are exactly the published ones.
+* Neutral, because the one-line Dockerfile is a small file to maintain.
+* Bad, because the manifest digest in ACR differs from the one in GHCR, and
+  because of the build on the deployment runner, as described above.
+
+### Build once in GitHub Actions, publish to GHCR, and import the image into ACR with `az acr import`
+
+* Good, because the image would have the same digest in both registries, as a
+  multi-platform image.
+* Bad, because Aspire does not configure the Container App's registry or pull
+  identity for an image that it did not build. The generated Bicep for such an
+  image has no `registries` entry, so the Container App could not pull from a
+  private registry. This was found by reading the Bicep that `aspire publish`
+  generates, and the TypeScript API cannot add it.
 
 ### Build once in GitHub Actions and push to both GHCR and ACR
 
@@ -132,10 +166,9 @@ flowchart LR
 * Bad, because the build needs Azure credentials and an existing ACR, which does
   not exist until the Azure resources are provisioned. The first deployment
   needs a separate bootstrap.
-* Bad, because every build writes to ACR, even for images that are never
-  deployed.
+* Bad, because it has the same missing pull configuration as the import option.
 
-### Let Aspire build a second image for ACR during deployment
+### Let Aspire build a second image from the source during deployment
 
 * Good, because it is the simplest deployment: Aspire builds and pushes the image
   itself.
@@ -152,16 +185,18 @@ flowchart LR
 
 ## More Information
 
-* Issue [#60](https://github.com/mfcollins3/standup/issues/60) implements the
-  Dockerfile, the release, and the workflow. Issue
-  [#61](https://github.com/mfcollins3/standup/issues/61) implements the import
-  into ACR and the deployment, and has to confirm that Azure Container Apps can
-  pull an imported image with the registry's managed identity.
+* Issue [#60](https://github.com/mfcollins3/standup/issues/60) implemented the
+  Dockerfile, the release, and the workflow that publishes the image. Issue
+  [#61](https://github.com/mfcollins3/standup/issues/61) implements the
+  deployment, and is where the import option was found not to work.
 * The image is built from `src/web/Dockerfile`. It runs as a non-root user,
   listens on port 8080, and answers `GET /healthz` for the health probes.
+* The deployment is described in `docs/contributing/deployment.md`.
 * The web app's architecture decision is in
   [the web app ADR](draft-web-app-phoenix-with-phoenix-vite-and-react.md), and
   the Aspire decision is in
   [the Aspire ADR](draft-aspire-typescript-apphost-for-orchestration-and-provisioning.md).
-* Revisit this decision if the app needs a separate migration step, or if images
-  need to be signed or scanned before they are deployed.
+* Revisit this decision if Aspire can configure registry access for an image
+  that it did not build, in which case importing the image would keep the
+  digest, or if the app needs a separate migration step, or if images need to be
+  signed or scanned before they are deployed.
