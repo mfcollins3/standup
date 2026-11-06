@@ -1,0 +1,12 @@
+#!/bin/sh
+# Starts the app in a container: run the database migrations, then start the
+# server. `exec` replaces this shell with the server, so the server receives the
+# container's stop signal and can shut down cleanly.
+#
+# Migrating when the container starts is fine while the app runs as one replica.
+# With more replicas, move the migrations to a separate Azure Container Apps job.
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+./migrate
+exec ./server

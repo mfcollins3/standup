@@ -14,7 +14,8 @@ config :standup, StandupWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # paths: ["/health"],
+      # The Azure Container Apps health probes use plain HTTP.
+      paths: ["/healthz"],
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]
