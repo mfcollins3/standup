@@ -16,6 +16,9 @@ defmodule StandupWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # Answer health probes before anything else is done for the request.
+  plug StandupWeb.Plugs.HealthCheck
+
   plug :favicon, dev_server: {PhoenixVite.Components, :has_vite_watcher?, [__MODULE__]}
 
   plug Plug.Static,
