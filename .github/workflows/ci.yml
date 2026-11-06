@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web app
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: src/web
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The OTP, Elixir and Node.js versions are pinned in src/web/.tool-versions.
+      - name: Set up Elixir and OTP
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: src/web/.tool-versions
+          version-type: strict
+
+      - name: Cache Mix dependencies and build
+        uses: actions/cache@v6
+        with:
+          path: |
+            src/web/deps
+            src/web/_build
+          key: mix-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-ex${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('src/web/mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-ex${{ steps.beam.outputs.elixir-version }}-
+
+      # pnpm/action-setup reads the version from "packageManager" in package.json.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: src/web/assets/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/web/.tool-versions
+          cache: pnpm
+          cache-dependency-path: src/web/assets/pnpm-lock.yaml
+
+      - name: Install Mix dependencies
+        run: mix deps.get
+
+      # phoenix_vite links the JavaScript packages from deps/, so run this after deps.get.
+      - name: Install JavaScript dependencies
+        run: mix assets.setup
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile, check for unused dependencies, and run the tests
+        run: |
+          mix compile --warnings-as-errors
+          mix deps.unlock --check-unused
+          mix test
+
+      - name: Type check the JavaScript
+        run: pnpm run typecheck
+        working-directory: src/web/assets
+
+      - name: Run the JavaScript tests
+        run: pnpm test
+        working-directory: src/web/assets
+
+      - name: Build the assets
+        run: mix assets.build
