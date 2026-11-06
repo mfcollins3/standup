@@ -99,3 +99,50 @@ jobs:
 
       - name: Build the assets
         run: mix assets.build
+
+  apphost:
+    name: Aspire AppHost
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: src/apphost
+
+    env:
+      # The Aspire CLI installs the AppHost's dependencies with
+      # `pnpm install --ignore-workspace`, which ignores pnpm-workspace.yaml.
+      # Approve esbuild's build script here instead (see src/apphost/README.md).
+      pnpm_config_allow_builds: '{"esbuild":true}'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm/action-setup reads the version from "packageManager" in package.json.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: src/apphost/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/web/.tool-versions
+          cache: pnpm
+          cache-dependency-path: src/apphost/pnpm-lock.yaml
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Install the version of the Aspire CLI that matches the SDK version in aspire.config.json.
+      - name: Install the Aspire CLI
+        run: |
+          version="$(jq -r '.sdk.version' aspire.config.json)"
+          dotnet tool install --global Aspire.Cli --version "$version"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Generate the Aspire SDK
+        run: aspire restore --non-interactive --nologo
+
+      - name: Lint and type check the AppHost
+        run: pnpm run build
