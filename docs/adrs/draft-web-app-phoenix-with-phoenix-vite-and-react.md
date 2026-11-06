@@ -60,6 +60,11 @@ The decision has these parts:
   connects Vite to Phoenix, including the development server with hot module
   replacement and the production manifest. Tailwind CSS and daisyUI come from
   the Phoenix generator and are bundled by Vite.
+* **Vite 8.** The project uses the latest Vite release, with
+  `@vitejs/plugin-react` 6 (which requires Vite 8), rather than the Vite 6 that
+  the phoenix_vite installer generates. Vite 8 replaces Rollup and esbuild with
+  the Rolldown bundler. phoenix_vite 0.6.1 works with it, as described in
+  [More Information](#more-information).
 * **React islands for rich components.** A React component is registered by
   name and mounted from a LiveView hook with the `<.react_island>` function
   component. The server passes props as JSON, and the component sends events
@@ -93,11 +98,10 @@ flowchart LR
 * Bad, because phoenix_vite does not provide React support, so the Fast
   Refresh preamble and the island hook are maintained in this project.
 * Bad, because phoenix_vite is developed against Vite 7 and its installer
-  generates a Vite 6 project. This project uses the latest Vite (8), which was
-  verified with phoenix_vite 0.6.1: the production build, the dev server, and
-  hot module replacement all work. phoenix_vite's JavaScript plugin declares no
-  supported Vite versions, so upgrading Vite or phoenix_vite needs the same
-  check.
+  generates a Vite 6 project, so this project runs a newer Vite than the one
+  phoenix_vite is developed against. phoenix_vite's JavaScript plugin declares
+  no supported Vite versions, so nothing stops an incompatible upgrade, and
+  each upgrade of Vite or phoenix_vite must be checked by hand.
 * Bad, because phoenix_vite supports npm and bun but not pnpm, so a small
   amount of glue code is needed, and must be kept when phoenix_vite is
   upgraded.
@@ -112,6 +116,10 @@ flowchart LR
 * Code review checks that new rich client components are registered in
   `assets/js/components/index.ts` and mounted with `<.react_island>`, rather
   than using a separate bundle or a single-page application shell.
+* When Vite or phoenix_vite is upgraded, the pull request confirms that the
+  production build (`mix assets.build`) produces a manifest, that the dev
+  server serves the app, and that editing a React component updates the page
+  in place without a full reload.
 
 ## Pros and Cons of the Options
 
@@ -162,6 +170,18 @@ flowchart LR
 * The island hook is in `src/web/assets/js/hooks/react_island.tsx` and the
   server-side component is in
   `src/web/lib/standup_web/components/react_components.ex`.
+* Vite 8.3.6 was verified with phoenix_vite 0.6.1 on 2026-11-05:
+  * The type check, the unit tests, and the production build pass, and the
+    manifest has the format that phoenix_vite reads.
+  * With `mix phx.server`, the dev server serves the Vite client, the app
+    entry, and the React Fast Refresh runtime.
+  * Over Vite's hot module replacement websocket, editing a React component
+    produces a hot update and not a full reload, and editing a `.heex`
+    template produces no reload. A browser was used to check hot reloading
+    only on Vite 6, so the Vite 8 result comes from that websocket check.
+* The phoenix_vite JavaScript plugin is small: it keeps template changes from
+  causing a full page reload and closes Vite when its standard input closes.
+  Check its source when changing Vite major versions.
 * Revisit this decision if phoenix_vite stops being maintained, or if the
   amount of client-side code grows to the point where most screens are React
   components.
