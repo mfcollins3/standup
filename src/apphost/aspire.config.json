@@ -16,6 +16,8 @@
     }
   },
   "packages": {
-    "Aspire.Hosting.Azure.PostgreSQL": "13.6.4"
+    "Aspire.Hosting.Azure.PostgreSQL": "13.6.4",
+    "Aspire.Hosting.Azure.AppContainers": "13.6.4",
+    "Aspire.Hosting.Azure.ContainerRegistry": "13.6.4"
   }
 }
