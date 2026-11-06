@@ -1,0 +1,152 @@
+name: Deploy
+
+# Deploys the web app to Azure. This workflow is run by hand from the Actions tab.
+#
+# It deploys an image that .github/workflows/container.yml already published to
+# GHCR. The image tag is resolved to a digest and the digest is deployed, so what
+# is deployed is exactly what was published. `aspire deploy` provisions or updates
+# the Azure resources (Container Apps environment, Container Registry, Azure
+# Database for PostgreSQL), pushes the image to the registry, and deploys it.
+#
+# Before the first run, set up Azure and the "production" environment as described
+# in docs/contributing/deployment.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: >-
+          The tag of the image in GHCR to deploy, for example latest, main, or
+          sha-1234567.
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+# Only one deployment at a time, and never cancel one that is running.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: standup-web
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      # Where Aspire deploys to.
+      Azure__SubscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      Azure__Location: ${{ vars.AZURE_LOCATION }}
+      Azure__ResourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+      # Use the credential from the azure/login step.
+      Azure__CredentialSource: AzureCli
+      # The Aspire CLI installs the AppHost's dependencies with
+      # `pnpm install --ignore-workspace`, which ignores pnpm-workspace.yaml.
+      # Approve esbuild's build script here instead (see src/apphost/README.md).
+      pnpm_config_allow_builds: '{"esbuild":true}'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pin the tag to the digest that it points to now. The image is public, so no
+      # login is needed. `gh attestation verify` checks that the image was built
+      # by this repository's container workflow.
+      - name: Resolve the image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_TAG: ${{ inputs.image-tag }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          digest="$(docker buildx imagetools inspect "${image}:${IMAGE_TAG}" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if [ -z "$digest" ] || [ "$digest" = "null" ]; then
+            echo "::error::Could not find ${image}:${IMAGE_TAG}"
+            exit 1
+          fi
+
+          gh attestation verify "oci://${image}@${digest}" --repo "${GITHUB_REPOSITORY}"
+
+          echo "WEB_IMAGE=${image}@${digest}" >> "$GITHUB_ENV"
+          {
+            echo "## Deploying"
+            echo
+            echo "- Image: \`${image}@${digest}\` (tag \`${IMAGE_TAG}\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # pnpm/action-setup reads the version from "packageManager" in package.json.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: src/apphost/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/web/.tool-versions
+          cache: pnpm
+          cache-dependency-path: src/apphost/pnpm-lock.yaml
+
+      - name: Install JavaScript dependencies
+        working-directory: src/apphost
+        run: pnpm install --frozen-lockfile
+
+      # Install the version of the Aspire CLI that matches the SDK version in aspire.config.json.
+      - name: Install the Aspire CLI
+        working-directory: src/apphost
+        run: |
+          version="$(jq -r '.sdk.version' aspire.config.json)"
+          dotnet tool install --global Aspire.Cli --version "$version"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Generate the Aspire SDK
+        working-directory: src/apphost
+        run: aspire restore --non-interactive --nologo
+
+      - name: Deploy with Aspire
+        working-directory: src/apphost
+        env:
+          Parameters__db_user: ${{ secrets.DB_USER }}
+          Parameters__db_password: ${{ secrets.DB_PASSWORD }}
+          Parameters__secret_key_base: ${{ secrets.SECRET_KEY_BASE }}
+        run: aspire deploy --environment production --non-interactive --nologo
+
+      # The Container App can take a few minutes to start answering after it
+      # is deployed.
+      - name: Check that the app is healthy
+        run: |
+          fqdn="$(az containerapp show \
+            --name web \
+            --resource-group "${Azure__ResourceGroup}" \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)"
+          echo "App: https://${fqdn}"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 10 "https://${fqdn}/healthz"; then
+              echo
+              echo "- App: https://${fqdn}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed. Waiting 10 seconds."
+            sleep 10
+          done
+
+          echo "::error::https://${fqdn}/healthz did not become healthy"
+          exit 1
