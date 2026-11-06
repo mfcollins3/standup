@@ -264,6 +264,27 @@ There are two causes, and the time at which it fails tells you which one it is.
   Azure's error does not say more. The AppHost cannot choose another zone or SKU,
   so the fix is another region.
 
+The SKU list does not predict the second case. A region can list `Standard_B1ms`
+with zones `1`, `2` and `3` and still fail. The only reliable check is to create
+a server with the same settings that the AppHost uses, and delete it. It takes
+about five minutes and costs very little:
+
+```shell
+az group create --name rg-standup-skutest --location "$LOCATION"
+az postgres flexible-server create \
+  --resource-group rg-standup-skutest --location "$LOCATION" \
+  --name "standup-skutest-$RANDOM" \
+  --tier Burstable --sku-name Standard_B1ms --version 16 \
+  --storage-size 32 --zone 1 --public-access None \
+  --admin-user skutestadmin --admin-password "Aa1$(openssl rand -hex 12)" \
+  --yes
+
+# Delete it, whether it worked or not:
+az group delete --name rg-standup-skutest --yes
+```
+
+If the `create` fails with `SkuNotAvailable`, choose another region.
+
 Azure's own record of the failure is in the deployment history:
 
 ```shell
