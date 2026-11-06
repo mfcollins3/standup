@@ -60,6 +60,24 @@ has no other place for this setting, so the install fails with
 variable gives pnpm the approval and lets the Aspire CLI install the
 dependencies.
 
+## Deploying to Azure
+
+The same AppHost defines the Azure resources. The **Deploy** workflow
+(`.github/workflows/deploy.yml`) runs `aspire deploy` to provision them and to
+deploy the web app, using an image that was published to GHCR. It tells the
+AppHost which image to use in the `WEB_IMAGE` environment variable, and Aspire
+builds [`web-image/Dockerfile`](web-image/Dockerfile) from it. See
+[Deploying to Azure](../../docs/contributing/deployment.md) for the one-time
+setup and how to run it.
+
+`aspire publish` writes the Bicep for these resources to a directory without
+connecting to Azure, which is useful to see what a deployment would create:
+
+```shell
+Parameters__db_user=x Parameters__db_password=x Parameters__secret_key_base=x \
+  aspire publish --output-path ./aspire-output
+```
+
 ## Checks
 
 ```shell
@@ -75,4 +93,5 @@ The continuous integration workflow runs these checks for every pull request.
 | --------------------- | ------------------------------------------------------------ |
 | `apphost.mts`         | Defines the resources.                                       |
 | `aspire.config.json`  | The Aspire SDK version, the integrations, and launch profile. |
+| `web-image/Dockerfile` | The image that is deployed to Azure: `FROM` the published image. |
 | `.aspire/`            | The generated TypeScript SDK. Recreate it with `aspire restore`. |

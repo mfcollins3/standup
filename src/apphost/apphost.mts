@@ -2,9 +2,11 @@
 // For more information, see: https://aspire.dev
 //
 // Run `aspire run` in this directory to start the app and its dependencies
-// locally, and open the Aspire dashboard to see them.
+// locally, and open the Aspire dashboard to see them. The deploy workflow
+// (.github/workflows/deploy.yml) runs this AppHost to provision and deploy the
+// app to Azure; see docs/contributing/deployment.md.
 
-import { createBuilder } from './.aspire/modules/aspire.mjs';
+import { createBuilder, EndpointProperty } from './.aspire/modules/aspire.mjs';
 
 const builder = await createBuilder();
 
@@ -44,8 +46,50 @@ if (await builder.executionContext().isRunMode()) {
     .withEnvironment('MIX_ENV', 'dev')
     .withReference(db)
     .waitFor(db);
-}
+} else {
+  // Azure: Azure Database for PostgreSQL, an Azure Container Apps environment
+  // (which also creates an Azure Container Registry), and a Container App that
+  // runs the container image built by .github/workflows/container.yml.
+  //
+  // The deploy workflow passes the published image in WEB_IMAGE, pinned by its
+  // digest, for example ghcr.io/<owner>/standup-web@sha256:<digest>. Aspire
+  // builds web-image/Dockerfile, which is only `FROM` that image, pushes it to
+  // the registry, and deploys it. See docs/contributing/deployment.md.
+  const webImage =
+    process.env.WEB_IMAGE ?? 'ghcr.io/mfcollins3/standup-web:latest';
 
-// Publishing to Azure is added in issue #61.
+  const dbUser = await builder.addParameter('db-user', { secret: true });
+  const dbPassword = await builder.addParameter('db-password', { secret: true });
+  const secretKeyBase = await builder.addParameter('secret-key-base', {
+    secret: true,
+  });
+
+  // Ecto cannot use Microsoft Entra tokens as the database password, so the
+  // server uses a user name and password.
+  const postgres = await builder
+    .addAzurePostgresFlexibleServer('postgres')
+    .withPasswordAuthentication({ userName: dbUser, password: dbPassword });
+
+  const db = await postgres.addDatabase('db', { databaseName: 'standup' });
+
+  await builder.addAzureContainerAppEnvironment('aca-env');
+
+  // The Container App is publicly reachable on port 8080 of the container.
+  const web = await builder
+    .addDockerfile('web', './web-image')
+    .withBuildArg('WEB_IMAGE', webImage)
+    .withHttpEndpoint({ targetPort: 8080 })
+    .withExternalHttpEndpoints()
+    .withReference(db)
+    .withEnvironment('DATABASE_SSL', 'true')
+    .withEnvironment('SECRET_KEY_BASE', secretKeyBase);
+
+  // The public host name is needed to generate URLs and to check the origin of
+  // WebSocket connections. It resolves to <app>.<environment default domain>.
+  await web.withEnvironment(
+    'PHX_HOST',
+    web.getEndpoint('http').property(EndpointProperty.Host),
+  );
+}
 
 await builder.build().run();
