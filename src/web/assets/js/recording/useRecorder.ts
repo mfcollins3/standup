@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MEDIA_CONSTRAINTS, RECORDER_OPTIONS, TIMESLICE_MS } from "./constraints";
-import { mapMediaError, type RecorderErrorCode } from "./errors";
+import { mapMediaError, type RecorderErrorCode, type RecorderWarningCode } from "./errors";
 import { isRecordingSupported, pickMimeType } from "./mediaSupport";
 
 /**
@@ -28,6 +28,8 @@ export interface UseRecorder {
   state: RecorderState;
   /** Set when `state` is `error`. */
   error: RecorderErrorCode | null;
+  /** Set when a recording ended early, and was kept. Cleared when recording starts again. */
+  warning: RecorderWarningCode | null;
   /** The live camera and microphone, while previewing or recording. */
   stream: MediaStream | null;
   /** The latest recording, once `state` is `recorded`. */
@@ -36,6 +38,8 @@ export interface UseRecorder {
   requestAccess: () => Promise<void>;
   start: () => void;
   stop: () => void;
+  /** Clears an error and goes back to the start, so the user can try again. */
+  dismissError: () => void;
 }
 
 /**
@@ -49,6 +53,7 @@ export interface UseRecorder {
 export function useRecorder(): UseRecorder {
   const [state, setState] = useState<RecorderState>("idle");
   const [error, setError] = useState<RecorderErrorCode | null>(null);
+  const [warning, setWarning] = useState<RecorderWarningCode | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState<Recording | null>(null);
 
@@ -60,6 +65,10 @@ export function useRecorder(): UseRecorder {
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
   const mountedRef = useRef(true);
+  // Set when a camera or microphone stops in the middle of a recording.
+  const deviceLostRef = useRef(false);
+  // Removes the listeners that watch the tracks of the recording in progress.
+  const unwatchTracksRef = useRef<(() => void) | null>(null);
 
   const transition = useCallback((next: RecorderState) => {
     stateRef.current = next;
@@ -96,6 +105,9 @@ export function useRecorder(): UseRecorder {
       }
       recorderRef.current = null;
 
+      unwatchTracksRef.current?.();
+      unwatchTracksRef.current = null;
+
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
@@ -106,6 +118,7 @@ export function useRecorder(): UseRecorder {
     if (current === "requesting" || current === "previewing" || current === "recording") return;
 
     setError(null);
+    setWarning(null);
 
     if (!isRecordingSupported()) {
       fail("unsupported");
@@ -154,6 +167,9 @@ export function useRecorder(): UseRecorder {
     };
 
     recorder.onstop = () => {
+      unwatchTracksRef.current?.();
+      unwatchTracksRef.current = null;
+
       const type = recorder.mimeType || mimeType || "video/webm";
       const blob = new Blob(chunksRef.current, { type });
       const durationMs = Math.round(performance.now() - startedAtRef.current);
@@ -165,14 +181,34 @@ export function useRecorder(): UseRecorder {
       if (!mountedRef.current) return;
 
       setRecording({ blob, mimeType: type, durationMs });
+      if (deviceLostRef.current) setWarning("device-lost");
       transition("recorded");
     };
 
     recorder.onerror = () => {
+      unwatchTracksRef.current?.();
+      unwatchTracksRef.current = null;
       chunksRef.current = [];
       recorderRef.current = null;
       if (mountedRef.current) fail("unknown");
     };
+
+    // If the camera or microphone stops by itself (it is unplugged, another app
+    // takes it, or the permission is taken away), end the recording and keep what
+    // was recorded, and remember it so the user can be told. Stopping a track
+    // ourselves does not fire this event.
+    deviceLostRef.current = false;
+    setWarning(null);
+    const onTrackEnded = () => {
+      if (stateRef.current !== "recording" || recorder.state === "inactive") return;
+
+      deviceLostRef.current = true;
+      recorder.stop();
+    };
+    const tracks = media.getTracks();
+    tracks.forEach((track) => track.addEventListener("ended", onTrackEnded));
+    unwatchTracksRef.current = () =>
+      tracks.forEach((track) => track.removeEventListener("ended", onTrackEnded));
 
     recorderRef.current = recorder;
     startedAtRef.current = performance.now();
@@ -187,5 +223,12 @@ export function useRecorder(): UseRecorder {
     recorderRef.current?.stop();
   }, []);
 
-  return { state, error, stream, recording, requestAccess, start, stop };
+  const dismissError = useCallback(() => {
+    if (stateRef.current !== "error") return;
+
+    setError(null);
+    transition("idle");
+  }, [transition]);
+
+  return { state, error, warning, stream, recording, requestAccess, start, stop, dismissError };
 }

@@ -6,10 +6,20 @@ import { vi, type Mock } from "vitest";
  * with them.
  */
 
-export class FakeTrack {
+export class FakeTrack extends EventTarget {
   readonly stop = vi.fn();
 
-  constructor(readonly kind: "video" | "audio") {}
+  constructor(readonly kind: "video" | "audio") {
+    super();
+  }
+
+  /**
+   * Ends the track by itself, as when a camera is unplugged. Unlike `stop()`, which
+   * the app calls, this fires the `ended` event.
+   */
+  end(): void {
+    this.dispatchEvent(new Event("ended"));
+  }
 }
 
 export class FakeMediaStream {
@@ -133,6 +143,59 @@ export function installFakeMedia({
     restore: () => {
       Reflect.deleteProperty(navigator, "mediaDevices");
       vi.unstubAllGlobals();
+    },
+  };
+}
+
+export class FakePermissionStatus extends EventTarget {
+  constructor(public state: PermissionState) {
+    super();
+  }
+}
+
+export type DevicePermission = "camera" | "microphone";
+
+export interface FakePermissions {
+  /** What the app calls to ask the browser about a permission. */
+  query: Mock<(descriptor: { name: string }) => Promise<FakePermissionStatus>>;
+  /** Changes a permission, as when the user allows or blocks the camera in the browser's settings. */
+  set(name: DevicePermission, state: PermissionState): void;
+  restore(): void;
+}
+
+export interface FakePermissionsOptions {
+  /** The state of each permission, `prompt` unless it is given. */
+  states?: Partial<Record<DevicePermission, PermissionState>>;
+  /** Make `query` reject, as Firefox does for the camera and microphone. */
+  rejectQuery?: boolean;
+}
+
+/** Installs a fake Permissions API. Call `restore()` in `afterEach`. */
+export function installFakePermissions({
+  states = {},
+  rejectQuery = false,
+}: FakePermissionsOptions = {}): FakePermissions {
+  const statuses: Record<DevicePermission, FakePermissionStatus> = {
+    camera: new FakePermissionStatus(states.camera ?? "prompt"),
+    microphone: new FakePermissionStatus(states.microphone ?? "prompt"),
+  };
+
+  const query = vi.fn(async (descriptor: { name: string }) => {
+    if (rejectQuery) throw new TypeError(`'${descriptor.name}' is not a valid permission name`);
+
+    return statuses[descriptor.name as DevicePermission];
+  });
+
+  Object.defineProperty(navigator, "permissions", { configurable: true, value: { query } });
+
+  return {
+    query,
+    set: (name, state) => {
+      statuses[name].state = state;
+      statuses[name].dispatchEvent(new Event("change"));
+    },
+    restore: () => {
+      Reflect.deleteProperty(navigator, "permissions");
     },
   };
 }

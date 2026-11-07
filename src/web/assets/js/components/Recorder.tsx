@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 
 import type { IslandProps } from "@/js/hooks/react_island";
-import { ERROR_MESSAGES } from "@/js/recording/errors";
+import { detectBrowser } from "@/js/recording/browser";
+import { describeBlocked, describeError, describeWarning } from "@/js/recording/errors";
 import { isRecordingSupported } from "@/js/recording/mediaSupport";
+import { useCameraBlocked } from "@/js/recording/permissions";
 import { saveRecording } from "@/js/recording/recordingStore";
 import { useRecorder, type Recording, type RecorderState } from "@/js/recording/useRecorder";
+import { HelpMessage } from "./HelpMessage";
 
 type RecorderProps = IslandProps<{
   /** The project the report is for, or null until the user chooses one. */
@@ -38,7 +41,10 @@ function statusText(state: RecorderState, hasProject: boolean): string {
  * its size and length. Screen recording is not offered.
  */
 export function Recorder({ projectId, pushEvent }: RecorderProps) {
-  const { state, error, stream, recording, requestAccess, start, stop } = useRecorder();
+  const { state, error, warning, stream, recording, requestAccess, start, stop, dismissError } =
+    useRecorder();
+  const blocked = useCameraBlocked();
+  const browser = detectBrowser();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const previousState = useRef<RecorderState>("idle");
@@ -73,15 +79,25 @@ export function Recorder({ projectId, pushEvent }: RecorderProps) {
     });
   }, [recording, pushEvent]);
 
+  // The user allowed the camera in the browser's settings after being told it was
+  // blocked, so the message is out of date. Clear it, so they can try again.
+  const wasBlocked = useRef(false);
+  useEffect(() => {
+    if (wasBlocked.current && !blocked && error === "permission-denied") dismissError();
+    wasBlocked.current = blocked;
+  }, [blocked, error, dismissError]);
+
   if (!isRecordingSupported()) {
-    return (
-      <div role="alert" className="alert alert-error">
-        {ERROR_MESSAGES.unsupported}
-      </div>
-    );
+    return <HelpMessage help={describeError("unsupported", browser)} role="alert" tone="error" />;
   }
 
   const noProject = projectId === null;
+
+  const errorHelp = state === "error" && error ? describeError(error, browser) : null;
+  // Before the user has clicked, say that the camera is blocked and how to allow
+  // it. After a click that was blocked, the error says the same, so only one shows.
+  const blockedHelp = blocked && state === "idle" ? describeBlocked(browser) : null;
+  const canRetry = state !== "error" || (errorHelp?.canRetry ?? true);
 
   const startRecording = () => {
     projectAtStart.current = projectId;
@@ -105,23 +121,30 @@ export function Recorder({ projectId, pushEvent }: RecorderProps) {
         {statusText(state, !noProject)}
       </p>
 
-      {state === "error" && error && (
-        <div role="alert" className="alert alert-error">
-          {ERROR_MESSAGES[error]}
-        </div>
+      {blockedHelp && <HelpMessage help={blockedHelp} role="status" tone="warning" />}
+
+      {errorHelp && <HelpMessage help={errorHelp} role="alert" tone="error" />}
+
+      {state === "recorded" && warning && (
+        <HelpMessage help={describeWarning(warning)} role="alert" tone="warning" />
       )}
 
       <div className="flex gap-2">
-        {(state === "idle" || state === "error" || state === "requesting" || state === "recorded") && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={noProject || state === "requesting"}
-            onClick={() => void requestAccess()}
-          >
-            {state === "recorded" ? "Record another" : "Enable camera and microphone"}
-          </button>
-        )}
+        {(state === "idle" || state === "error" || state === "requesting" || state === "recorded") &&
+          canRetry && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={noProject || state === "requesting"}
+              onClick={() => void requestAccess()}
+            >
+              {state === "recorded"
+                ? "Record another"
+                : state === "error"
+                  ? "Try again"
+                  : "Enable camera and microphone"}
+            </button>
+          )}
 
         {state === "previewing" && (
           <button type="button" className="btn btn-primary" disabled={noProject} onClick={startRecording}>
