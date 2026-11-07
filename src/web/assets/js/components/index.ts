@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import type { IslandProps } from "@/js/hooks/react_island";
 
 import { Hello } from "./Hello";
+import { Recorder } from "./Recorder";
 
 /**
  * The React components that can be mounted with `<.react_island component="…">`.
@@ -13,4 +14,5 @@ import { Hello } from "./Hello";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const components: Record<string, ComponentType<IslandProps<any>>> = {
   Hello,
+  Recorder,
 };

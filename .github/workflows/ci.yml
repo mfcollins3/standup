@@ -146,3 +146,101 @@ jobs:
 
       - name: Lint and type check the AppHost
         run: pnpm run build
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        working-directory: src/web
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The OTP, Elixir and Node.js versions are pinned in src/web/.tool-versions.
+      - name: Set up Elixir and OTP
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: src/web/.tool-versions
+          version-type: strict
+
+      # The tests run the development server, so this caches the development build.
+      - name: Cache Mix dependencies and build
+        uses: actions/cache@v6
+        with:
+          path: |
+            src/web/deps
+            src/web/_build
+          key: mix-dev-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-ex${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('src/web/mix.lock') }}
+          restore-keys: |
+            mix-dev-${{ runner.os }}-otp${{ steps.beam.outputs.otp-version }}-ex${{ steps.beam.outputs.elixir-version }}-
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: src/web/assets/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/web/.tool-versions
+          cache: pnpm
+          cache-dependency-path: src/web/assets/pnpm-lock.yaml
+
+      - name: Install Mix dependencies
+        run: mix deps.get
+
+      - name: Install JavaScript dependencies
+        run: mix assets.setup
+
+      - name: Create the development database
+        run: mix ecto.setup
+
+      # The browser is cached by the Playwright version, which is in the lock file.
+      - name: Cache the Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('src/web/assets/pnpm-lock.yaml') }}
+
+      - name: Install the Playwright browser and its system libraries
+        working-directory: src/web/assets
+        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      # The browser is cached, but its system libraries are not.
+      - name: Install the Playwright system libraries
+        working-directory: src/web/assets
+        run: pnpm exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+
+      - name: Run the end-to-end tests
+        working-directory: src/web/assets
+        run: pnpm run e2e
+
+      - name: Upload the test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: src/web/tmp/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
