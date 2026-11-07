@@ -13,7 +13,7 @@
 - [ ] Recording stops automatically at 5 minutes and tells the user.
 - [ ] Users can review, discard and re-record before uploading.
 - [x] Screen recording is not offered.
-- [ ] Clear messages are shown when permission is denied or no camera is available.
+- [x] Clear messages are shown when permission is denied or no camera is available.
 
 **Technical Notes:** Use getUserMedia and MediaRecorder with a feature check for Safari codec support (MP4/H.264 or WebM). Target 720p default; cap bitrate to control storage cost.
 

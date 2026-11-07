@@ -232,6 +232,84 @@ describe("useRecorder", () => {
     });
   });
 
+  describe("when the camera or microphone stops during a recording", () => {
+    it.each(["video", "audio"] as const)(
+      "ends the recording and keeps it when the %s track ends",
+      async (kind) => {
+        const { result } = await recording();
+
+        act(() => media.streams[0]?.tracks.find((track) => track.kind === kind)?.end());
+
+        expect(media.recorders[0]?.stop).toHaveBeenCalledTimes(1);
+        expect(result.current.state).toBe("recorded");
+        expect(result.current.recording).not.toBeNull();
+        expect(result.current.warning).toBe("device-lost");
+        expect(media.streams[0]?.allTracksStopped).toBe(true);
+      },
+    );
+
+    it("has no warning when the user stops the recording", async () => {
+      const { result } = await recording();
+
+      act(() => result.current.stop());
+
+      expect(result.current.warning).toBeNull();
+    });
+
+    it("does not warn about a track that ends after the recording was stopped", async () => {
+      const { result } = await recording();
+      act(() => result.current.stop());
+
+      act(() => media.streams[0]?.tracks[0]?.end());
+
+      expect(result.current.warning).toBeNull();
+      expect(media.recorders[0]?.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it("clears the warning when the user records again", async () => {
+      const { result } = await recording();
+      act(() => media.streams[0]?.tracks[0]?.end());
+      expect(result.current.warning).toBe("device-lost");
+
+      await act(async () => result.current.requestAccess());
+
+      expect(result.current.warning).toBeNull();
+    });
+
+    it("clears the warning when the next recording starts", async () => {
+      const { result } = await recording();
+      act(() => media.streams[0]?.tracks[0]?.end());
+      await act(async () => result.current.requestAccess());
+      act(() => result.current.start());
+
+      act(() => result.current.stop());
+
+      expect(result.current.warning).toBeNull();
+    });
+  });
+
+  describe("dismissing an error", () => {
+    it("goes back to the start so the user can try again", async () => {
+      media.rejectWith("NotAllowedError");
+      const { result } = renderHook(() => useRecorder());
+      await act(async () => result.current.requestAccess());
+      expect(result.current.state).toBe("error");
+
+      act(() => result.current.dismissError());
+
+      expect(result.current.state).toBe("idle");
+      expect(result.current.error).toBeNull();
+    });
+
+    it("does nothing when there is no error", async () => {
+      const { result } = await previewing();
+
+      act(() => result.current.dismissError());
+
+      expect(result.current.state).toBe("previewing");
+    });
+  });
+
   describe("when the component goes away", () => {
     it("turns the camera off while previewing", async () => {
       const { unmount } = await previewing();

@@ -11,7 +11,8 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * Chromium runs with a fake camera and microphone that produce a test pattern
  * and a beep, and with the permission prompt accepted, so the tests do not need
- * a real device or a person.
+ * a real device or a person. One project uses the full Chromium and lets the tests
+ * set the camera permission to "denied", for the tests of a real denial.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -33,11 +34,25 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /permission-denied\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: {
           args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
         },
+      },
+    },
+    {
+      // For the tests of a camera that the browser has blocked. It is the full
+      // Chromium, in headless mode, because the older headless Chromium has no
+      // permission handling and answers "not supported" instead of "denied". The
+      // permission prompt is not accepted here: the tests set the permission.
+      name: "chromium-camera-denied",
+      testMatch: /permission-denied\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: "chromium",
+        launchOptions: { args: ["--use-fake-device-for-media-stream"] },
       },
     },
   ],

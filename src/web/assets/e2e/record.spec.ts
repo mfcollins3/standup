@@ -1,4 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+import {
+  enableButton,
+  failToStartWith,
+  openRecordPage,
+  project,
+  watchMedia,
+  type TrackedWindow,
+} from "./helpers";
 
 /**
  * Recording a status report in the browser (NS-010, first criterion): the user
@@ -8,70 +17,6 @@ import { expect, test, type Page } from "@playwright/test";
  * Chromium is started with a fake camera and microphone, and with the permission
  * prompt accepted (see playwright.config.ts).
  */
-
-interface TrackedWindow extends Window {
-  __streams: MediaStream[];
-  __recorders: MediaRecorder[];
-  __displayMediaCalls: number;
-}
-
-/**
- * Watches the media APIs, so the tests can look at what the page did with them:
- * the streams that it was given, the recorders that it made, and whether it ever
- * asked to capture the screen.
- */
-async function watchMedia(page: Page) {
-  await page.addInitScript(() => {
-    const tracked = window as unknown as TrackedWindow;
-    tracked.__streams = [];
-    tracked.__recorders = [];
-    tracked.__displayMediaCalls = 0;
-
-    const devices = navigator.mediaDevices;
-    const getUserMedia = devices.getUserMedia.bind(devices);
-    devices.getUserMedia = async (constraints) => {
-      const stream = await getUserMedia(constraints);
-      tracked.__streams.push(stream);
-      return stream;
-    };
-
-    devices.getDisplayMedia = () => {
-      tracked.__displayMediaCalls += 1;
-      return Promise.reject(new DOMException("not allowed", "NotAllowedError"));
-    };
-
-    const NativeRecorder = window.MediaRecorder;
-    window.MediaRecorder = class extends NativeRecorder {
-      constructor(stream: MediaStream, options?: MediaRecorderOptions) {
-        super(stream, options);
-        tracked.__recorders.push(this);
-      }
-    };
-  });
-}
-
-/** Makes the camera and microphone fail to start with this kind of error. */
-async function failToStartWith(page: Page, name: string) {
-  await page.addInitScript((errorName) => {
-    navigator.mediaDevices.getUserMedia = () =>
-      Promise.reject(new DOMException("test", errorName));
-  }, name);
-}
-
-/**
- * Opens the page, and waits until LiveView is connected and the recorder is on
- * the page. A choice made before that is lost: the server has not heard about it,
- * and its first render puts the page back to the start.
- */
-async function openRecordPage(page: Page) {
-  await page.goto("/record");
-  await expect(page.locator("[data-phx-main].phx-connected")).toBeAttached();
-  await expect(page.getByRole("status")).toBeVisible();
-}
-
-const project = (page: Page) => page.getByLabel("Project");
-const enableButton = (page: Page) =>
-  page.getByRole("button", { name: "Enable camera and microphone" });
 
 test.describe("recording a status report", () => {
   test.beforeEach(async ({ page }) => {
@@ -188,16 +133,20 @@ test.describe("recording a status report", () => {
 });
 
 test.describe("when the camera cannot be used", () => {
-  test("tells the user that permission was denied, and lets them try again", async ({ page }) => {
+  test("tells the user that the browser blocked it, with steps, and lets them try again", async ({
+    page,
+  }) => {
     await failToStartWith(page, "NotAllowedError");
     await openRecordPage(page);
 
     await project(page).selectOption({ index: 1 });
     await enableButton(page).click();
 
-    await expect(page.getByRole("alert")).toContainText("denied");
-    await expect(enableButton(page)).toBeEnabled();
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText("blocked the camera and microphone");
+    await expect(alert.getByRole("listitem")).not.toHaveCount(0);
     await expect(page.getByLabel("Camera preview")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
   });
 
   test("tells the user that there is no camera", async ({ page }) => {
@@ -208,6 +157,7 @@ test.describe("when the camera cannot be used", () => {
     await enableButton(page).click();
 
     await expect(page.getByRole("alert")).toContainText("No camera or microphone was found");
+    await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
   });
 });
 
