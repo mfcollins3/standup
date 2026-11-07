@@ -46,6 +46,10 @@ export interface UseRecorder {
   stop: () => void;
   /** Clears an error and goes back to the start, so the user can try again. */
   dismissError: () => void;
+  /** Lets go of the finished recording and goes back to the start. Does nothing otherwise. */
+  reset: () => void;
+  /** Shows a recording that was kept earlier, as if it had just finished. Only from the start. */
+  load: (recording: Recording) => void;
 }
 
 /**
@@ -274,5 +278,36 @@ export function useRecorder(maxDurationMs: number = MAX_RECORDING_MS): UseRecord
     transition("idle");
   }, [transition]);
 
-  return { state, error, warning, startedAt, stream, recording, requestAccess, start, stop, dismissError };
+  const reset = useCallback(() => {
+    if (stateRef.current !== "recorded") return;
+
+    setRecording(null);
+    setWarning(null);
+    transition("idle");
+  }, [transition]);
+
+  const load = useCallback(
+    (kept: Recording) => {
+      if (stateRef.current !== "idle") return;
+
+      setRecording(kept);
+      transition("recorded");
+    },
+    [transition],
+  );
+
+  return {
+    state,
+    error,
+    warning,
+    startedAt,
+    stream,
+    recording,
+    requestAccess,
+    start,
+    stop,
+    dismissError,
+    reset,
+    load,
+  };
 }

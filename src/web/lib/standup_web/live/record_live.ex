@@ -6,7 +6,9 @@ defmodule StandupWeb.RecordLive do
   The user chooses a project and records with the `Recorder` React component.
   The video stays in the browser. When a recording is finished, the component
   tells this LiveView its size and length, and the page shows that it is ready.
-  Reviewing, re-recording and uploading are separate features.
+  The user can watch the recording in the browser, and discard it or record
+  again. Discarding tells this LiveView, which stops saying the recording is
+  ready. Uploading is a separate feature.
   """
   use StandupWeb, :live_view
 
@@ -67,6 +69,15 @@ defmodule StandupWeb.RecordLive do
       {:noreply, assign(socket, :last_recording, recording)}
     else
       {:noreply, socket}
+    end
+  end
+
+  def handle_event("recording_discarded", %{"project_id" => project_id}, socket) do
+    # Only clear the message if it is about the project that was discarded. A
+    # discard for any other project leaves the page alone.
+    case socket.assigns.last_recording do
+      %{project: %{id: ^project_id}} -> {:noreply, assign(socket, :last_recording, nil)}
+      _ -> {:noreply, socket}
     end
   end
 

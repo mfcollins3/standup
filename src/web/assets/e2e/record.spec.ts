@@ -91,19 +91,70 @@ test.describe("recording a status report", () => {
     expect(mimeType).toMatch(/^video\/(mp4|webm)/);
   });
 
-  test("can record another report", async ({ page }) => {
+  test("reviews a recording, discards it with confirmation, and records again", async ({ page }) => {
     await project(page).selectOption({ label: "Mobile app" });
     await enableButton(page).click();
     await page.getByRole("button", { name: "Start recording" }).click();
     await page.getByRole("button", { name: "Stop recording" }).click();
     await expect(page.locator("#recording-ready")).toContainText("Mobile app");
 
-    await page.getByRole("button", { name: "Record another" }).click();
+    // The recording can be played back before anything else.
+    const player = page.getByLabel("Your recording");
+    await expect(player).toBeVisible();
+    await expect(player).toHaveAttribute("controls", "");
+    await expect
+      .poll(() => player.evaluate((video: HTMLVideoElement) => video.readyState))
+      .toBeGreaterThan(0);
+    const url = await player.getAttribute("src");
+    expect(url).toMatch(/^blob:/);
+
+    // Cancelling the confirmation keeps the recording.
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(page.getByRole("alertdialog", { name: "Discard this recording?" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Keep recording" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(player).toBeVisible();
+    await expect(page.locator("#recording-ready")).toBeVisible();
+
+    // Leaving the page while the recording is kept asks the browser to confirm.
+    const asked = await page.evaluate(() => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(asked).toBe(true);
+
+    // Discarding throws it away, and the page stops saying it is ready.
+    await page.getByRole("button", { name: "Discard" }).click();
+    await page.getByRole("button", { name: "Discard recording" }).click();
+    await expect(page.getByLabel("Your recording")).toHaveCount(0);
+    await expect(page.locator("#recording-ready")).toHaveCount(0);
+    await expect(enableButton(page)).toBeEnabled();
+    expect(
+      await page.evaluate(() => {
+        const event = new Event("beforeunload", { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      }),
+    ).toBe(false);
+
+    // Recording again, for the same project, goes back to the camera preview.
+    await enableButton(page).click();
+    await page.getByRole("button", { name: "Start recording" }).click();
+    await page.getByRole("button", { name: "Stop recording" }).click();
+    await expect(page.locator("#recording-ready")).toContainText("Mobile app");
+
+    await page.getByRole("button", { name: "Record again" }).click();
+    await page.getByRole("button", { name: "Delete and record again" }).click();
+    await expect(page.getByLabel("Camera preview")).toBeVisible();
+    await expect(page.locator("#recording-ready")).toHaveCount(0);
     await page.getByRole("button", { name: "Start recording" }).click();
     await page.getByRole("button", { name: "Stop recording" }).click();
 
-    await expect(page.getByRole("button", { name: "Record another" })).toBeVisible();
-    expect(await page.evaluate(() => (window as unknown as TrackedWindow).__streams.length)).toBe(2);
+    await expect(page.getByLabel("Your recording")).toBeVisible();
+    await expect(page.locator("#recording-ready")).toContainText("Mobile app");
+    expect(await page.evaluate(() => (window as unknown as TrackedWindow).__streams.length)).toBe(3);
   });
 
   test("clears the finished recording when another project is chosen", async ({ page }) => {

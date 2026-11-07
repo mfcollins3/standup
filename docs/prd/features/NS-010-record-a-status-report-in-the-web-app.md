@@ -11,7 +11,7 @@
 - [x] Users choose a project and record using the camera and microphone after granting browser permission.
 - [x] The app shows a live preview, elapsed time, a record/stop control and the remaining time.
 - [x] Recording stops automatically at 5 minutes and tells the user.
-- [ ] Users can review, discard and re-record before uploading.
+- [x] Users can review, discard and re-record before uploading.
 - [x] Screen recording is not offered.
 - [x] Clear messages are shown when permission is denied or no camera is available.
 
