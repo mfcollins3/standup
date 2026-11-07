@@ -20,6 +20,18 @@ if System.get_env("PHX_SERVER") do
   config :standup, StandupWeb.Endpoint, server: true
 end
 
+# MAX_RECORDING_MS, in milliseconds, overrides the recording limit in
+# config/config.exs. The end-to-end tests use it to set a short limit.
+if max_recording_ms = System.get_env("MAX_RECORDING_MS") do
+  case Integer.parse(max_recording_ms) do
+    {ms, ""} when ms > 0 ->
+      config :standup, :max_recording_ms, ms
+
+    _ ->
+      raise "environment variable MAX_RECORDING_MS must be a positive number of milliseconds"
+  end
+end
+
 config :standup, StandupWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

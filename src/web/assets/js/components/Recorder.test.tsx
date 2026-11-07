@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
@@ -298,6 +298,7 @@ describe("Recorder", () => {
         mime_type: "video/webm;codecs=vp9,opus",
         size: "video-bytes".length,
         duration_ms: 3500,
+        stopped_by: "user",
       });
       expect(getRecording(PROJECT)).toMatchObject({
         mimeType: "video/webm;codecs=vp9,opus",
@@ -350,6 +351,126 @@ describe("Recorder", () => {
         .map(([, payload]) => (payload as { state: string }).state);
 
       expect(states).toEqual(["requesting", "previewing", "recording", "recorded"]);
+    });
+  });
+
+  describe("the clock and the time limit", () => {
+    const LIMIT_MS = 120_000;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Starts a recording with fake timers, which `userEvent` does not work well with. */
+    async function startWithFakeTimers(maxDurationMs = LIMIT_MS) {
+      const view = render(<Recorder projectId={PROJECT} maxDurationMs={maxDurationMs} pushEvent={pushEvent} />);
+
+      fireEvent.click(enable());
+      await act(async () => {});
+      fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+
+      return view;
+    }
+
+    const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+
+    it("shows the elapsed and remaining time as m:ss next to the stop control", async () => {
+      await startWithFakeTimers();
+
+      const timer = screen.getByRole("timer");
+      expect(timer).toHaveTextContent("Elapsed 0:00");
+      expect(timer).toHaveTextContent("Remaining 2:00");
+
+      tick(5_000);
+      expect(timer).toHaveTextContent("Elapsed 0:05");
+      expect(timer).toHaveTextContent("Remaining 1:55");
+
+      tick(65_000);
+      expect(timer).toHaveTextContent("Elapsed 1:10");
+      expect(timer).toHaveTextContent("Remaining 0:50");
+    });
+
+    it("keeps the clock out of the live announcements", async () => {
+      await startWithFakeTimers();
+
+      expect(screen.getByRole("timer")).toHaveAttribute("aria-live", "off");
+      expect(screen.getByRole("status")).not.toHaveTextContent("Elapsed");
+
+      tick(5_000);
+
+      expect(screen.getByRole("status")).toHaveTextContent("Recording.");
+    });
+
+    it("announces the time left at 1 minute, 30 seconds and 10 seconds only", async () => {
+      await startWithFakeTimers();
+      const status = screen.getByRole("status");
+      const announced: string[] = [];
+
+      // Look at the status after every second, as a screen reader would hear changes.
+      for (let second = 0; second < 115; second++) {
+        tick(1_000);
+        const text = status.textContent ?? "";
+        if (announced.at(-1) !== text) announced.push(text);
+      }
+
+      expect(announced).toEqual(["Recording.", "1 minute left.", "30 seconds left.", "10 seconds left."]);
+    });
+
+    it("does not announce a milestone that is longer than the limit", async () => {
+      await startWithFakeTimers(20_000);
+
+      expect(screen.getByRole("status")).toHaveTextContent("Recording.");
+
+      tick(10_000);
+
+      expect(screen.getByRole("status")).toHaveTextContent("10 seconds left.");
+    });
+
+    it("stops at the limit, keeps the recording, and tells the user", async () => {
+      await startWithFakeTimers();
+
+      tick(LIMIT_MS);
+
+      expect(screen.queryByRole("button", { name: "Stop recording" })).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Recording stopped at the 2 minute limit.");
+      expect(media.recorders[0]?.stop).toHaveBeenCalledTimes(1);
+      expect(media.streams[0]?.allTracksStopped).toBe(true);
+      expect(getRecording(PROJECT)).toMatchObject({ stoppedBy: "limit" });
+      expect(pushEvent).toHaveBeenCalledWith(
+        "recording_complete",
+        expect.objectContaining({ project_id: PROJECT, stopped_by: "limit" }),
+      );
+    });
+
+    it("says the 5 minute limit by default", async () => {
+      render(<Recorder projectId={PROJECT} pushEvent={pushEvent} />);
+
+      fireEvent.click(enable());
+      await act(async () => {});
+      fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+
+      expect(screen.getByRole("timer")).toHaveTextContent("Remaining 5:00");
+
+      tick(5 * 60 * 1000);
+
+      expect(screen.getByRole("status")).toHaveTextContent("Recording stopped at the 5 minute limit.");
+    });
+
+    it("does not mention the limit when the user stops the recording", async () => {
+      await startWithFakeTimers();
+      tick(10_000);
+
+      fireEvent.click(screen.getByRole("button", { name: "Stop recording" }));
+
+      expect(screen.getByRole("status")).toHaveTextContent("Recording finished.");
+      expect(pushEvent).toHaveBeenCalledWith(
+        "recording_complete",
+        expect.objectContaining({ stopped_by: "user" }),
+      );
     });
   });
 });

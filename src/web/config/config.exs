@@ -18,6 +18,11 @@ config :standup,
   ecto_repos: [Standup.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# The longest status report recording, in milliseconds (5 minutes). The recorder
+# in the browser stops by itself at this limit and tells the user. The server
+# enforces its own limit separately (NS-014). Set MAX_RECORDING_MS to change it.
+config :standup, :max_recording_ms, 300_000
+
 # Configure the endpoint
 config :standup, StandupWeb.Endpoint,
   url: [host: "localhost"],
