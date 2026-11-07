@@ -23,6 +23,7 @@ defmodule StandupWeb.RecordLive do
      |> assign(:page_title, "Record a status report")
      |> assign(:projects, projects)
      |> assign(:selected_project_id, nil)
+     |> assign(:max_recording_ms, Application.fetch_env!(:standup, :max_recording_ms))
      |> assign(:recorder_state, "idle")
      |> assign(:last_recording, nil)}
   end
@@ -48,7 +49,7 @@ defmodule StandupWeb.RecordLive do
           "mime_type" => mime_type,
           "size" => size,
           "duration_ms" => duration_ms
-        },
+        } = params,
         socket
       )
       when is_binary(mime_type) and is_integer(size) and size >= 0 and is_integer(duration_ms) and
@@ -58,7 +59,9 @@ defmodule StandupWeb.RecordLive do
         project: Projects.get_project!(project_id),
         mime_type: mime_type,
         size: size,
-        duration_ms: duration_ms
+        duration_ms: duration_ms,
+        # The browser says what stopped the recording. Anything but "limit" is the user.
+        stopped_by: if(params["stopped_by"] == "limit", do: :limit, else: :user)
       }
 
       {:noreply, assign(socket, :last_recording, recording)}
@@ -76,6 +79,9 @@ defmodule StandupWeb.RecordLive do
   defp format_size(bytes) when bytes < 1024, do: "#{bytes} bytes"
   defp format_size(bytes) when bytes < 1024 * 1024, do: "#{Float.round(bytes / 1024, 1)} KB"
   defp format_size(bytes), do: "#{Float.round(bytes / (1024 * 1024), 1)} MB"
+
+  defp format_limit(ms) when rem(ms, 60_000) == 0, do: "#{div(ms, 60_000)} minute"
+  defp format_limit(ms), do: "#{round(ms / 1000)} second"
 
   defp format_duration(duration_ms), do: "#{Float.round(duration_ms / 1000, 1)} seconds"
 
@@ -102,7 +108,7 @@ defmodule StandupWeb.RecordLive do
         <.react_island
           id="recorder"
           component="Recorder"
-          props={%{projectId: @selected_project_id}}
+          props={%{projectId: @selected_project_id, maxDurationMs: @max_recording_ms}}
         />
 
         <div :if={@last_recording} id="recording-ready" role="status" class="alert alert-success">
@@ -110,6 +116,9 @@ defmodule StandupWeb.RecordLive do
             Recording ready for {@last_recording.project.name}: {format_size(@last_recording.size)}, {format_duration(
               @last_recording.duration_ms
             )}.
+            <%= if @last_recording.stopped_by == :limit do %>
+              Recording stopped at the {format_limit(@max_recording_ms)} limit.
+            <% end %>
           </span>
         </div>
       </div>

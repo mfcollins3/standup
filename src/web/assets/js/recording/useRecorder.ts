@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { MEDIA_CONSTRAINTS, RECORDER_OPTIONS, TIMESLICE_MS } from "./constraints";
+import { MAX_RECORDING_MS, MEDIA_CONSTRAINTS, RECORDER_OPTIONS, TIMESLICE_MS } from "./constraints";
 import { mapMediaError, type RecorderErrorCode, type RecorderWarningCode } from "./errors";
 import { isRecordingSupported, pickMimeType } from "./mediaSupport";
 
@@ -16,12 +16,16 @@ import { isRecordingSupported, pickMimeType } from "./mediaSupport";
  */
 export type RecorderState = "idle" | "requesting" | "previewing" | "recording" | "recorded" | "error";
 
+/** Who ended a recording: the user (the Stop button), or the recorder at the time limit. */
+export type StoppedBy = "user" | "limit";
+
 /** A finished recording. It lives in memory in the browser. */
 export interface Recording {
   blob: Blob;
   /** The format that the browser recorded, for example `video/webm;codecs=vp9,opus`. */
   mimeType: string;
   durationMs: number;
+  stoppedBy: StoppedBy;
 }
 
 export interface UseRecorder {
@@ -30,6 +34,8 @@ export interface UseRecorder {
   error: RecorderErrorCode | null;
   /** Set when a recording ended early, and was kept. Cleared when recording starts again. */
   warning: RecorderWarningCode | null;
+  /** When the recording in progress started, in `performance.now()` milliseconds. */
+  startedAt: number | null;
   /** The live camera and microphone, while previewing or recording. */
   stream: MediaStream | null;
   /** The latest recording, once `state` is `recorded`. */
@@ -49,11 +55,18 @@ export interface UseRecorder {
  * It never asks for access by itself: the user has to click first. It always
  * stops every track of the stream when it is done, on an error, and when the
  * component goes away, so the camera light does not stay on.
+ *
+ * A recording stops by itself after `maxDurationMs`, and is kept, like when the
+ * user presses Stop. The time comes from `performance.now()`, and is checked by
+ * a timer and again every time the recorder hands over video (once a second).
+ * Browsers slow the timers of a tab in the background, so the timer alone could
+ * stop the recording late, but the recorder's own events are not slowed.
  */
-export function useRecorder(): UseRecorder {
+export function useRecorder(maxDurationMs: number = MAX_RECORDING_MS): UseRecorder {
   const [state, setState] = useState<RecorderState>("idle");
   const [error, setError] = useState<RecorderErrorCode | null>(null);
   const [warning, setWarning] = useState<RecorderWarningCode | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState<Recording | null>(null);
 
@@ -64,11 +77,21 @@ export function useRecorder(): UseRecorder {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
+  const maxDurationRef = useRef(maxDurationMs);
+  maxDurationRef.current = maxDurationMs;
+  // Who is stopping the recording. It is "limit" only when the limit stops it.
+  const stoppedByRef = useRef<StoppedBy>("user");
+  const limitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   // Set when a camera or microphone stops in the middle of a recording.
   const deviceLostRef = useRef(false);
   // Removes the listeners that watch the tracks of the recording in progress.
   const unwatchTracksRef = useRef<(() => void) | null>(null);
+
+  const clearLimitTimer = useCallback(() => {
+    if (limitTimerRef.current !== null) clearTimeout(limitTimerRef.current);
+    limitTimerRef.current = null;
+  }, []);
 
   const transition = useCallback((next: RecorderState) => {
     stateRef.current = next;
@@ -95,6 +118,7 @@ export function useRecorder(): UseRecorder {
 
     return () => {
       mountedRef.current = false;
+      clearLimitTimer();
 
       const recorder = recorderRef.current;
       if (recorder && recorder.state !== "inactive") {
@@ -111,7 +135,7 @@ export function useRecorder(): UseRecorder {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, []);
+  }, [clearLimitTimer]);
 
   const requestAccess = useCallback(async () => {
     const current = stateRef.current;
@@ -164,9 +188,19 @@ export function useRecorder(): UseRecorder {
 
     recorder.ondataavailable = (event: BlobEvent) => {
       if (event.data.size > 0) chunksRef.current.push(event.data);
+
+      // The backstop for the timer, which a background tab can delay.
+      if (
+        recorder.state !== "inactive" &&
+        performance.now() - startedAtRef.current >= maxDurationRef.current
+      ) {
+        stoppedByRef.current = "limit";
+        recorder.stop();
+      }
     };
 
     recorder.onstop = () => {
+      clearLimitTimer();
       unwatchTracksRef.current?.();
       unwatchTracksRef.current = null;
 
@@ -180,12 +214,13 @@ export function useRecorder(): UseRecorder {
 
       if (!mountedRef.current) return;
 
-      setRecording({ blob, mimeType: type, durationMs });
+      setRecording({ blob, mimeType: type, durationMs, stoppedBy: stoppedByRef.current });
       if (deviceLostRef.current) setWarning("device-lost");
       transition("recorded");
     };
 
     recorder.onerror = () => {
+      clearLimitTimer();
       unwatchTracksRef.current?.();
       unwatchTracksRef.current = null;
       chunksRef.current = [];
@@ -211,10 +246,19 @@ export function useRecorder(): UseRecorder {
       tracks.forEach((track) => track.removeEventListener("ended", onTrackEnded));
 
     recorderRef.current = recorder;
+    stoppedByRef.current = "user";
     startedAtRef.current = performance.now();
+    setStartedAt(startedAtRef.current);
     recorder.start(TIMESLICE_MS);
+    limitTimerRef.current = setTimeout(() => {
+      limitTimerRef.current = null;
+      if (recorder.state === "inactive") return;
+
+      stoppedByRef.current = "limit";
+      recorder.stop();
+    }, maxDurationRef.current);
     transition("recording");
-  }, [fail, releaseStream, transition]);
+  }, [clearLimitTimer, fail, releaseStream, transition]);
 
   const stop = useCallback(() => {
     if (stateRef.current !== "recording") return;
@@ -230,5 +274,5 @@ export function useRecorder(): UseRecorder {
     transition("idle");
   }, [transition]);
 
-  return { state, error, warning, stream, recording, requestAccess, start, stop, dismissError };
+  return { state, error, warning, startedAt, stream, recording, requestAccess, start, stop, dismissError };
 }

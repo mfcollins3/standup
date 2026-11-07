@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   enableButton,
@@ -129,6 +129,77 @@ test.describe("recording a status report", () => {
       await page.evaluate(() => (window as unknown as TrackedWindow).__displayMediaCalls),
     ).toBe(0);
     await expect(page.getByText(/screen/i)).toHaveCount(0);
+  });
+});
+
+test.describe("the recording limit", () => {
+  // The server is started with a limit of 8 seconds (see playwright.config.ts).
+  const LIMIT_SECONDS = 8;
+  const stoppedMessage = `Recording stopped at the ${LIMIT_SECONDS} second limit.`;
+
+  async function startRecording(page: Page) {
+    await openRecordPage(page);
+    await project(page).selectOption({ label: "Website redesign" });
+    await enableButton(page).click();
+    await page.getByRole("button", { name: "Start recording" }).click();
+  }
+
+  async function expectStoppedAtTheLimit(page: Page) {
+    // The user is told, in the status and on the page that the server renders.
+    await expect(page.getByRole("status").first()).toContainText(stoppedMessage, {
+      timeout: 15_000,
+    });
+    const ready = page.locator("#recording-ready");
+    await expect(ready).toContainText("Website redesign");
+    await expect(ready).toContainText(stoppedMessage);
+
+    // It stopped by itself within a second of the limit, and kept the recording.
+    const seconds = Number((await ready.innerText()).match(/(\d+(\.\d+)?) seconds/)?.[1]);
+    expect(seconds).toBeGreaterThanOrEqual(LIMIT_SECONDS - 0.5);
+    expect(seconds).toBeLessThanOrEqual(LIMIT_SECONDS + 1);
+    await expect(ready).toContainText(/\d+(\.\d+)? (KB|MB)/);
+
+    await expect(page.getByRole("button", { name: "Stop recording" })).toHaveCount(0);
+    await expect(project(page)).toBeEnabled();
+    expect(
+      await page.evaluate(() =>
+        (window as unknown as TrackedWindow).__streams[0]?.getTracks().map((t) => t.readyState),
+      ),
+    ).toEqual(["ended", "ended"]);
+  }
+
+  test("shows the elapsed and remaining time, and stops by itself at the limit", async ({
+    page,
+  }) => {
+    await watchMedia(page);
+    await startRecording(page);
+
+    const timer = page.getByRole("timer");
+    await expect(timer).toContainText("Elapsed 0:00");
+    await expect(timer).toContainText(`Remaining 0:0${LIMIT_SECONDS}`);
+
+    // The clock moves every second.
+    await expect(timer).toContainText("Elapsed 0:02");
+    await expect(timer).toContainText(`Remaining 0:0${LIMIT_SECONDS - 2}`);
+
+    // The clock is not read out: the status does not carry it.
+    await expect(page.getByRole("status").first()).not.toContainText("Elapsed");
+
+    await expectStoppedAtTheLimit(page);
+  });
+
+  test("stops at the limit when the tab is in the background", async ({ page, context }) => {
+    await watchMedia(page);
+    await startRecording(page);
+
+    // Bring another tab to the front, so the recorder's tab is behind it.
+    const other = await context.newPage();
+    await other.goto("about:blank");
+    await other.bringToFront();
+
+    await expectStoppedAtTheLimit(page);
+
+    await other.close();
   });
 });
 

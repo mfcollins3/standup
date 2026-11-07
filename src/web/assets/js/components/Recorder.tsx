@@ -2,6 +2,13 @@ import { useEffect, useRef } from "react";
 
 import type { IslandProps } from "@/js/hooks/react_island";
 import { detectBrowser } from "@/js/recording/browser";
+import {
+  describeLimit,
+  formatClock,
+  milestoneMessage,
+  useElapsedSeconds,
+} from "@/js/recording/clock";
+import { MAX_RECORDING_MS } from "@/js/recording/constraints";
 import { describeBlocked, describeError, describeWarning } from "@/js/recording/errors";
 import { isRecordingSupported } from "@/js/recording/mediaSupport";
 import { useCameraBlocked } from "@/js/recording/permissions";
@@ -12,9 +19,17 @@ import { HelpMessage } from "./HelpMessage";
 type RecorderProps = IslandProps<{
   /** The project the report is for, or null until the user chooses one. */
   projectId: string | null;
+  /** The longest recording, in milliseconds. The server sets it from config. */
+  maxDurationMs?: number;
 }>;
 
-function statusText(state: RecorderState, hasProject: boolean): string {
+function statusText(
+  state: RecorderState,
+  hasProject: boolean,
+  milestone: string | null,
+  limitReached: boolean,
+  maxDurationMs: number,
+): string {
   switch (state) {
     case "idle":
     case "error":
@@ -26,9 +41,11 @@ function statusText(state: RecorderState, hasProject: boolean): string {
     case "previewing":
       return "Your camera and microphone are on. Press Start recording when you are ready.";
     case "recording":
-      return "Recording.";
+      return milestone ?? "Recording.";
     case "recorded":
-      return "Recording finished.";
+      return limitReached
+        ? `Recording stopped at the ${describeLimit(maxDurationMs)} limit.`
+        : "Recording finished.";
   }
 }
 
@@ -40,9 +57,22 @@ function statusText(state: RecorderState, hasProject: boolean): string {
  * recording stops it is kept in memory with its project, and the server is told
  * its size and length. Screen recording is not offered.
  */
-export function Recorder({ projectId, pushEvent }: RecorderProps) {
-  const { state, error, warning, stream, recording, requestAccess, start, stop, dismissError } =
-    useRecorder();
+export function Recorder({ projectId, maxDurationMs = MAX_RECORDING_MS, pushEvent }: RecorderProps) {
+  const {
+    state,
+    error,
+    warning,
+    startedAt,
+    stream,
+    recording,
+    requestAccess,
+    start,
+    stop,
+    dismissError,
+  } = useRecorder(maxDurationMs);
+  const elapsedSeconds = useElapsedSeconds(state === "recording" ? startedAt : null);
+  const limitSeconds = Math.ceil(maxDurationMs / 1000);
+  const remainingSeconds = Math.max(0, limitSeconds - elapsedSeconds);
   const blocked = useCameraBlocked();
   const browser = detectBrowser();
 
@@ -76,6 +106,7 @@ export function Recorder({ projectId, pushEvent }: RecorderProps) {
       mime_type: recording.mimeType,
       size: recording.blob.size,
       duration_ms: recording.durationMs,
+      stopped_by: recording.stoppedBy,
     });
   }, [recording, pushEvent]);
 
@@ -118,7 +149,13 @@ export function Recorder({ projectId, pushEvent }: RecorderProps) {
       )}
 
       <p role="status" aria-live="polite">
-        {statusText(state, !noProject)}
+        {statusText(
+          state,
+          !noProject,
+          milestoneMessage(remainingSeconds, limitSeconds),
+          recording?.stoppedBy === "limit",
+          maxDurationMs,
+        )}
       </p>
 
       {blockedHelp && <HelpMessage help={blockedHelp} role="status" tone="warning" />}
@@ -153,9 +190,17 @@ export function Recorder({ projectId, pushEvent }: RecorderProps) {
         )}
 
         {state === "recording" && (
-          <button type="button" className="btn btn-error" onClick={stop}>
-            Stop recording
-          </button>
+          <>
+            <button type="button" className="btn btn-error" onClick={stop}>
+              Stop recording
+            </button>
+
+            {/* Not a live region: a screen reader hears the milestones in the status instead. */}
+            <p role="timer" aria-live="off" className="flex items-center gap-4 tabular-nums">
+              <span>Elapsed {formatClock(elapsedSeconds)}</span>
+              <span>Remaining {formatClock(remainingSeconds)}</span>
+            </p>
+          </>
         )}
       </div>
     </div>

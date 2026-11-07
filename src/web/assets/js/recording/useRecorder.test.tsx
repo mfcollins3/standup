@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakeMediaStream, installFakeMedia, type FakeMedia } from "../test/fakeMedia";
-import { MEDIA_CONSTRAINTS, TIMESLICE_MS } from "./constraints";
+import { MAX_RECORDING_MS, MEDIA_CONSTRAINTS, TIMESLICE_MS } from "./constraints";
 import { useRecorder } from "./useRecorder";
 
 describe("useRecorder", () => {
@@ -339,6 +339,110 @@ describe("useRecorder", () => {
       await act(async () => allow(late));
 
       expect(late.allTracksStopped).toBe(true);
+    });
+  });
+
+  describe("the time limit", () => {
+    const LIMIT_MS = 60_000;
+
+    async function recordingWithLimit(limit = LIMIT_MS) {
+      const hook = renderHook(() => useRecorder(limit));
+      await act(async () => hook.result.current.requestAccess());
+      act(() => hook.result.current.start());
+      return hook;
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("limits a recording to 5 minutes unless it is told otherwise", async () => {
+      vi.useFakeTimers();
+      const { result } = await recording();
+
+      act(() => vi.advanceTimersByTime(MAX_RECORDING_MS - 1));
+      expect(result.current.state).toBe("recording");
+
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.state).toBe("recorded");
+      expect(result.current.recording?.stoppedBy).toBe("limit");
+    });
+
+    it("stops at the limit, keeps what was recorded, and turns the camera off", async () => {
+      vi.useFakeTimers();
+      const { result } = await recordingWithLimit();
+
+      act(() => vi.advanceTimersByTime(LIMIT_MS - 1));
+      expect(result.current.state).toBe("recording");
+
+      act(() => vi.advanceTimersByTime(1));
+
+      expect(result.current.state).toBe("recorded");
+      expect(result.current.recording).toMatchObject({ stoppedBy: "limit", durationMs: LIMIT_MS });
+      expect(result.current.recording?.blob.size).toBeGreaterThan(0);
+      expect(media.streams[0]?.allTracksStopped).toBe(true);
+    });
+
+    it("reports a stop by the user as the user", async () => {
+      vi.useFakeTimers();
+      const { result } = await recordingWithLimit();
+
+      act(() => vi.advanceTimersByTime(10_000));
+      act(() => result.current.stop());
+
+      expect(result.current.recording?.stoppedBy).toBe("user");
+    });
+
+    it("does not stop again at the limit after the user stopped it", async () => {
+      vi.useFakeTimers();
+      const { result } = await recordingWithLimit();
+
+      act(() => result.current.stop());
+      act(() => vi.advanceTimersByTime(LIMIT_MS * 2));
+
+      expect(media.recorders[0]?.stop).toHaveBeenCalledTimes(1);
+      expect(result.current.recording?.stoppedBy).toBe("user");
+    });
+
+    it("times a second recording from its own start", async () => {
+      vi.useFakeTimers();
+      const { result } = await recordingWithLimit();
+      act(() => vi.advanceTimersByTime(LIMIT_MS));
+
+      await act(async () => result.current.requestAccess());
+      act(() => result.current.start());
+      act(() => vi.advanceTimersByTime(LIMIT_MS - 1));
+      expect(result.current.state).toBe("recording");
+
+      act(() => vi.advanceTimersByTime(1));
+      expect(result.current.state).toBe("recorded");
+    });
+
+    it("stops from the recorder's own data event when the timer is late, as in a background tab", async () => {
+      // Fake timers are not used: the limit timer never fires, as if the tab were asleep.
+      const now = vi.spyOn(performance, "now");
+      now.mockReturnValue(1000);
+      const { result } = await recordingWithLimit();
+      const recorder = media.recorders[0]!;
+
+      now.mockReturnValue(1000 + LIMIT_MS - 1);
+      act(() => recorder.ondataavailable?.({ data: new Blob(["chunk"]) }));
+      expect(result.current.state).toBe("recording");
+
+      now.mockReturnValue(1000 + LIMIT_MS + 400);
+      act(() => recorder.ondataavailable?.({ data: new Blob(["chunk"]) }));
+
+      expect(result.current.state).toBe("recorded");
+      expect(result.current.recording?.stoppedBy).toBe("limit");
+    });
+
+    it("clears the timer when the component goes away", async () => {
+      vi.useFakeTimers();
+      const { unmount } = await recordingWithLimit();
+
+      unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 });

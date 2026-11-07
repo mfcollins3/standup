@@ -13,7 +13,13 @@ import { defineConfig, devices } from "@playwright/test";
  * and a beep, and with the permission prompt accepted, so the tests do not need
  * a real device or a person. One project uses the full Chromium and lets the tests
  * set the camera permission to "denied", for the tests of a real denial.
+ *
+ * The server is started with a short recording limit (MAX_RECORDING_MS), so the
+ * tests of the limit do not have to wait 5 minutes. A server that is already
+ * running (`reuseExistingServer`) keeps its own limit, and those tests fail.
  */
+const MAX_RECORDING_MS = 8000;
+
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "../tmp/e2e-results",
@@ -62,6 +68,7 @@ export default defineConfig({
     cwd: "..",
     url: "http://localhost:4000/healthz",
     reuseExistingServer: !process.env.CI,
+    env: { MAX_RECORDING_MS: String(MAX_RECORDING_MS) },
     timeout: 180_000,
     stdout: "pipe",
     stderr: "pipe",

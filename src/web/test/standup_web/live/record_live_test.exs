@@ -57,7 +57,7 @@ defmodule StandupWeb.RecordLiveTest do
 
     test "mounts the recorder with no project chosen", %{view: view} do
       assert has_element?(view, "#recorder[phx-hook='ReactIsland'][data-component='Recorder']")
-      assert island_props(view) == %{"projectId" => nil}
+      assert island_props(view) == %{"projectId" => nil, "maxDurationMs" => 300_000}
     end
 
     test "does not show a finished recording", %{view: view} do
@@ -69,20 +69,20 @@ defmodule StandupWeb.RecordLiveTest do
     test "passes the project to the recorder", %{view: view, project: project} do
       select_project(view, project.id)
 
-      assert island_props(view) == %{"projectId" => project.id}
+      assert island_props(view) == %{"projectId" => project.id, "maxDurationMs" => 300_000}
     end
 
     test "choosing the prompt again clears the project", %{view: view, project: project} do
       select_project(view, project.id)
       select_project(view, "")
 
-      assert island_props(view) == %{"projectId" => nil}
+      assert island_props(view) == %{"projectId" => nil, "maxDurationMs" => 300_000}
     end
 
     test "ignores a project that the user cannot record for", %{view: view} do
       render_hook(view, "select_project", %{"project_id" => "forged-id"})
 
-      assert island_props(view) == %{"projectId" => nil}
+      assert island_props(view) == %{"projectId" => nil, "maxDurationMs" => 300_000}
     end
 
     test "clears a finished recording", %{view: view, project: project} do
@@ -122,6 +122,37 @@ defmodule StandupWeb.RecordLiveTest do
       assert has_element?(view, "#recording-ready[role='status']", project.name)
       assert has_element?(view, "#recording-ready", "2.0 KB")
       assert has_element?(view, "#recording-ready", "3.2 seconds")
+    end
+
+    test "says when the recording stopped at the limit", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project, %{"stopped_by" => "limit", "duration_ms" => 300_000})
+
+      assert has_element?(view, "#recording-ready", "Recording stopped at the 5 minute limit.")
+    end
+
+    test "does not mention the limit when the user stopped it", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project, %{"stopped_by" => "user"})
+
+      refute has_element?(view, "#recording-ready", "limit")
+    end
+
+    test "treats an unknown reason for stopping as the user", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project, %{"stopped_by" => "bogus"})
+
+      refute has_element?(view, "#recording-ready", "limit")
+    end
+
+    test "takes the limit from application config", %{conn: conn} do
+      previous = Application.fetch_env!(:standup, :max_recording_ms)
+      Application.put_env(:standup, :max_recording_ms, 90_000)
+      on_exit(fn -> Application.put_env(:standup, :max_recording_ms, previous) end)
+
+      {:ok, view, _html} = live(conn, ~p"/record")
+
+      assert island_props(view)["maxDurationMs"] == 90_000
     end
 
     test "is shown in megabytes when it is large", %{view: view, project: project} do

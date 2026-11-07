@@ -29,6 +29,14 @@ export const AUDIO_BITS_PER_SECOND = 64_000;
 /** How often, in milliseconds, the recorder hands over the video recorded so far. */
 export const TIMESLICE_MS = 1000;
 
+/**
+ * The longest recording, in milliseconds (5 minutes). The server passes the real
+ * limit to the recorder from application config (NS-014), and this is what the
+ * recorder uses when it is not given one. The limit is for the user: the server
+ * is the one that enforces it.
+ */
+export const MAX_RECORDING_MS = 5 * 60 * 1000;
+
 /** The options that cap the recording's bitrate. */
 export const RECORDER_OPTIONS = {
   videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
