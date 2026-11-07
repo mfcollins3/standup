@@ -187,4 +187,42 @@ defmodule StandupWeb.RecordLiveTest do
       refute has_element?(view, "#recording-ready")
     end
   end
+
+  describe "a discarded recording" do
+    test "is no longer shown as ready", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project)
+      assert has_element?(view, "#recording-ready")
+
+      render_hook(view, "recording_discarded", %{"project_id" => project.id})
+
+      refute has_element?(view, "#recording-ready")
+    end
+
+    test "leaves the page alone when it is for another project", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project)
+
+      render_hook(view, "recording_discarded", %{"project_id" => "some-other-project"})
+
+      assert has_element?(view, "#recording-ready", project.name)
+    end
+
+    test "is ignored when there is no recording", %{view: view, project: project} do
+      render_hook(view, "recording_discarded", %{"project_id" => project.id})
+
+      refute has_element?(view, "#recording-ready")
+      assert has_element?(view, "#recorder")
+    end
+
+    test "can be followed by a new recording", %{view: view, project: project} do
+      select_project(view, project.id)
+      complete_recording(view, project, %{"size" => 2048})
+      render_hook(view, "recording_discarded", %{"project_id" => project.id})
+
+      complete_recording(view, project, %{"size" => 4096})
+
+      assert has_element?(view, "#recording-ready", "4.0 KB")
+    end
+  end
 end

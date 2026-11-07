@@ -445,4 +445,50 @@ describe("useRecorder", () => {
       expect(vi.getTimerCount()).toBe(0);
     });
   });
+
+  describe("resetting and loading", () => {
+    async function recorded() {
+      const hook = await recording();
+      act(() => hook.result.current.stop());
+      return hook;
+    }
+
+    it("lets go of a finished recording and goes back to the start", async () => {
+      const { result } = await recorded();
+      expect(result.current.state).toBe("recorded");
+
+      act(() => result.current.reset());
+
+      expect(result.current.state).toBe("idle");
+      expect(result.current.recording).toBeNull();
+    });
+
+    it("ignores a reset when there is no finished recording", async () => {
+      const { result } = await previewing();
+
+      act(() => result.current.reset());
+
+      expect(result.current.state).toBe("previewing");
+    });
+
+    it("shows a kept recording from the start", () => {
+      const { result } = renderHook(() => useRecorder());
+      const kept = { blob: new Blob(["x"]), mimeType: "video/webm", durationMs: 10, stoppedBy: "user" as const };
+
+      act(() => result.current.load(kept));
+
+      expect(result.current.state).toBe("recorded");
+      expect(result.current.recording).toBe(kept);
+    });
+
+    it("does not replace a recording in progress with a kept one", async () => {
+      const { result } = await recording();
+
+      act(() =>
+        result.current.load({ blob: new Blob(), mimeType: "video/webm", durationMs: 1, stoppedBy: "user" }),
+      );
+
+      expect(result.current.state).toBe("recording");
+    });
+  });
 });

@@ -25,7 +25,15 @@ describe("Recorder", () => {
   let permissions: FakePermissions | undefined;
   let pushEvent: Mock<PushEvent>;
 
+  let createObjectURL: Mock<(blob: Blob) => string>;
+  let revokeObjectURL: Mock<(url: string) => void>;
+
   beforeEach(() => {
+    let urls = 0;
+    createObjectURL = vi.fn((_blob: Blob) => "blob:recording-" + ++urls);
+    revokeObjectURL = vi.fn();
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
     media = installFakeMedia({ supportedTypes: ["video/webm;codecs=vp9,opus", "video/webm"] });
     pushEvent = vi.fn<PushEvent>();
   });
@@ -250,8 +258,9 @@ describe("Recorder", () => {
       expect(getRecording(PROJECT)).toBeDefined();
       expect(pushEvent).toHaveBeenCalledWith("recording_complete", expect.objectContaining({ project_id: PROJECT }));
       expect(screen.queryByRole("button", { name: "Stop recording" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Record another" })).toBeEnabled();
-      await user.click(screen.getByRole("button", { name: "Record another" }));
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      await user.click(screen.getByRole("button", { name: "Record again" }));
+      await user.click(screen.getByRole("button", { name: "Delete and record again" }));
       expect(await screen.findByRole("button", { name: "Start recording" })).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
@@ -330,14 +339,173 @@ describe("Recorder", () => {
       expect(getRecording(OTHER_PROJECT)).toBeUndefined();
     });
 
-    it("can record another report", async () => {
-      const { user } = await renderAndStart();
-      await user.click(screen.getByRole("button", { name: "Stop recording" }));
+  });
 
-      await user.click(screen.getByRole("button", { name: "Record another" }));
+  describe("reviewing a recording", () => {
+    async function recorded() {
+      const started = await renderAndStart();
+      await started.user.click(screen.getByRole("button", { name: "Stop recording" }));
+      return started;
+    }
 
-      expect(await screen.findByRole("button", { name: "Start recording" })).toBeInTheDocument();
-      expect(media.streams).toHaveLength(2);
+    const reviewer = () => screen.getByLabelText("Your recording") as HTMLVideoElement;
+
+    it("plays the recording back in a labelled player with controls", async () => {
+      await recorded();
+
+      expect(createObjectURL).toHaveBeenCalledWith(getRecording(PROJECT)?.blob);
+      expect(reviewer()).toHaveAttribute("src", "blob:recording-1");
+      expect(reviewer()).toHaveAttribute("controls");
+    });
+
+    it("offers Record again and Discard, and not Record another", async () => {
+      await recorded();
+
+      expect(screen.getByRole("button", { name: "Record again" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
+      expect(screen.queryByRole("button", { name: "Record another" })).not.toBeInTheDocument();
+    });
+
+    it("revokes the playback URL when the page is left", async () => {
+      const { unmount } = await recorded();
+
+      unmount();
+
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:recording-1");
+    });
+
+    describe("discarding", () => {
+      it("asks first, and keeps the recording when the user cancels", async () => {
+        const { user } = await recorded();
+
+        await user.click(screen.getByRole("button", { name: "Discard" }));
+
+        const dialog = screen.getByRole("alertdialog", { name: "Discard this recording?" });
+        expect(dialog).toHaveAccessibleDescription(/cannot get it back/);
+        expect(screen.getByRole("button", { name: "Keep recording" })).toHaveFocus();
+        expect(getRecording(PROJECT)).toBeDefined();
+
+        await user.click(screen.getByRole("button", { name: "Keep recording" }));
+
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+        expect(getRecording(PROJECT)).toBeDefined();
+        expect(reviewer()).toBeInTheDocument();
+        expect(revokeObjectURL).not.toHaveBeenCalled();
+        expect(pushEvent).not.toHaveBeenCalledWith("recording_discarded", expect.anything());
+      });
+
+      it("cancels with Escape and puts the focus back on the button", async () => {
+        const { user } = await recorded();
+        await user.click(screen.getByRole("button", { name: "Discard" }));
+
+        await user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+        await vi.waitFor(() => expect(screen.getByRole("button", { name: "Discard" })).toHaveFocus());
+        expect(getRecording(PROJECT)).toBeDefined();
+      });
+
+      it("throws the recording away once confirmed, and tells the server", async () => {
+        const { user } = await recorded();
+        await user.click(screen.getByRole("button", { name: "Discard" }));
+
+        await user.click(screen.getByRole("button", { name: "Discard recording" }));
+
+        expect(getRecording(PROJECT)).toBeUndefined();
+        expect(pushEvent).toHaveBeenCalledWith("recording_discarded", { project_id: PROJECT });
+        expect(revokeObjectURL).toHaveBeenCalledWith("blob:recording-1");
+        expect(screen.queryByLabelText("Your recording")).not.toBeInTheDocument();
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+        expect(enable()).toBeEnabled();
+        expect(screen.getByRole("status")).toHaveTextContent(/Turn on your camera/);
+      });
+    });
+
+    describe("recording again", () => {
+      it("asks first, and keeps the recording when the user cancels", async () => {
+        const { user } = await recorded();
+
+        await user.click(screen.getByRole("button", { name: "Record again" }));
+        expect(screen.getByRole("alertdialog", { name: "Record again?" })).toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Keep recording" }));
+
+        expect(getRecording(PROJECT)).toBeDefined();
+        expect(media.streams).toHaveLength(1);
+        expect(reviewer()).toBeInTheDocument();
+      });
+
+      it("goes back to the camera preview for the same project once confirmed", async () => {
+        const { user } = await recorded();
+        await user.click(screen.getByRole("button", { name: "Record again" }));
+
+        await user.click(screen.getByRole("button", { name: "Delete and record again" }));
+
+        expect(await screen.findByLabelText("Camera preview")).toBeVisible();
+        expect(media.streams).toHaveLength(2);
+        expect(getRecording(PROJECT)).toBeUndefined();
+        expect(pushEvent).toHaveBeenCalledWith("recording_discarded", { project_id: PROJECT });
+        expect(revokeObjectURL).toHaveBeenCalledWith("blob:recording-1");
+
+        await user.click(screen.getByRole("button", { name: "Start recording" }));
+        await user.click(screen.getByRole("button", { name: "Stop recording" }));
+
+        expect(getRecording(PROJECT)).toBeDefined();
+        expect(reviewer()).toHaveAttribute("src", "blob:recording-2");
+      });
+    });
+
+    describe("choosing another project", () => {
+      it("keeps the first project's recording in memory and shows the new project's start", async () => {
+        const { rerender } = await recorded();
+
+        rerender(<Recorder projectId={OTHER_PROJECT} pushEvent={pushEvent} />);
+
+        expect(getRecording(PROJECT)).toBeDefined();
+        expect(screen.queryByLabelText("Your recording")).not.toBeInTheDocument();
+        expect(enable()).toBeEnabled();
+      });
+
+      it("brings the first project's recording back when it is chosen again", async () => {
+        const { rerender } = await recorded();
+        rerender(<Recorder projectId={OTHER_PROJECT} pushEvent={pushEvent} />);
+        pushEvent.mockClear();
+
+        rerender(<Recorder projectId={PROJECT} pushEvent={pushEvent} />);
+
+        expect(reviewer()).toBeInTheDocument();
+        expect(pushEvent).toHaveBeenCalledWith(
+          "recording_complete",
+          expect.objectContaining({ project_id: PROJECT }),
+        );
+      });
+    });
+
+    describe("leaving the page", () => {
+      const leave = () => {
+        const event = new Event("beforeunload", { cancelable: true });
+        window.dispatchEvent(event);
+        return event;
+      };
+
+      it("asks the browser to confirm while a recording is kept", async () => {
+        await recorded();
+
+        expect(leave().defaultPrevented).toBe(true);
+      });
+
+      it("does not ask when nothing is kept", () => {
+        renderRecorder();
+
+        expect(leave().defaultPrevented).toBe(false);
+      });
+
+      it("stops asking once the recording is discarded", async () => {
+        const { user } = await recorded();
+        await user.click(screen.getByRole("button", { name: "Discard" }));
+        await user.click(screen.getByRole("button", { name: "Discard recording" }));
+
+        expect(leave().defaultPrevented).toBe(false);
+      });
     });
   });
 
